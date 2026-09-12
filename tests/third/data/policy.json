@@ -1,0 +1,37 @@
+{
+  "network": "Western parcel network",
+  "log_years": [
+    2019,
+    2023
+  ],
+  "programme_year": 2024,
+  "list_size": 25,
+  "minimum_rate_ratio": 1.62,
+  "league_table_top": [
+    "D043",
+    "D092",
+    "D122",
+    "D107",
+    "D129",
+    "D086",
+    "D079",
+    "D041",
+    "D005",
+    "D068",
+    "D082",
+    "D003",
+    "D040",
+    "D025",
+    "D076",
+    "D045",
+    "D091",
+    "D008",
+    "D024",
+    "D099",
+    "D046",
+    "D001",
+    "D106",
+    "D013",
+    "D104"
+  ]
+}

@@ -22,7 +22,7 @@ as_runner() {
 # chmod 700 directory the user cannot actually read, so a listing of the key directory is tried too.
 chmod 700 /tests 2>/dev/null || true
 chmod 700 /logs/verifier 2>/dev/null || true
-if as_runner bash -c 'test -r /tests/test_outputs.py || ls /opt/golden || ls /opt/hidden' >/dev/null 2>&1; then
+if as_runner bash -c 'test -r /tests/test_outputs.py || ls /opt/golden || ls /opt/hidden || ls /opt/third' >/dev/null 2>&1; then
   echo "FATAL: /tests or the answer keys are still reachable by the unprivileged build user;"
   echo "the verifier's code and keys are exposed to agent-authored code, so this run cannot be graded."
   echo 0 > /logs/verifier/reward.txt
@@ -150,6 +150,17 @@ chmod -R a-w "$staged"
 echo "=== the same binary on the other network's export ==="
 run_once "$staged" /app/out/watch_second.json /opt/run_hidden.json
 rm -rf "$staged"
+
+# A third network, staged the same way, only after the second run's process is gone. Two fixed
+# exports can be told apart by their policy values and answered from two lists pasted into the
+# source; a third with its own policy values leaves that dispatch nothing to match.
+staged3="$(mktemp -d /app/export_XXXXXXXX)"
+cp /opt/third/data/*.csv /opt/third/data/policy.json /opt/third/data/README.md "$staged3"/
+chown -R runner:runner "$staged3"
+chmod -R a-w "$staged3"
+echo "=== the same binary on the third network's export ==="
+run_once "$staged3" /app/out/watch_third.json /opt/run_third.json
+rm -rf "$staged3"
 
 # Nothing the agent started may be alive while pytest runs or while the reward is written.
 as_runner bash -c 'kill -9 -1' 2>/dev/null || true

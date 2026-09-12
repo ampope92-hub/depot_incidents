@@ -22,7 +22,7 @@ yard happens to trunk drivers from the hub's trunking depot, and the app counts 
 it happened. All three are drawn from their own random streams, so the underlying incidents, and
 the key, do not depend on them.
 
-    gen_incidents.py <out-dir> <key-dir> [--seed N] [--hidden]
+    gen_incidents.py <out-dir> <key-dir> [--seed N] [--hidden] [--third]
 
 Standard library only.
 """
@@ -41,10 +41,14 @@ def main():
     ap.add_argument("key_dir")
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--hidden", action="store_true")
+    ap.add_argument("--third", action="store_true",
+                     help="a third network graded alongside the shipped and hidden ones, its own "
+                          "policy values, so a submission keyed on which of two fixed exports it "
+                          "was handed has no branch to take")
     ap.add_argument("--pilot", type=int, default=None)
     a = ap.parse_args()
     if a.seed is None:
-        a.seed = 33 if a.hidden else 38
+        a.seed = 33 if a.hidden else (47 if a.third else 38)
     rng = random.Random(a.seed)
 
     if a.hidden:
@@ -63,6 +67,17 @@ def main():
         # drivers from its trunking depot, the share of visitors at an ordinary depot, and how
         # steeply hub status follows the depot's underlying rate (the hubs are the busy yards)
         n_hubs, hub_visitor, other_visitor, hub_power = 20, (0.70, 0.90), (0.0, 0.06), 3.0
+    elif a.third:
+        network, n_depots, years = "Western parcel network", 130, 5
+        severe_share, rate_mu, rate_sigma = 0.11, math.log(3.6), 0.48
+        rep_a, rep_b = 0.65, 0.8
+        list_size, rate_bar = 25, 1.62
+        regions = ["Cumbria", "Lancashire", "Merseyside"]
+        first_year = 2019
+        n_pilot_default = 50
+        n_agency_heavy, heavy_share = 12, (0.40, 0.65)
+        n_merged = 6
+        n_hubs, hub_visitor, other_visitor, hub_power = 9, (0.50, 0.70), (0.0, 0.05), 2.5
     else:
         network, n_depots, years = "Southern parcel network", 180, 5
         severe_share, rate_mu, rate_sigma = 0.10, math.log(4.0), 0.5

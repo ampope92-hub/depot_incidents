@@ -130,7 +130,8 @@ def main():
     a = ap.parse_args()
     fmt = lambda v: f"{st.mean(v):6.3f} [{min(v):6.3f},{max(v):6.3f}]"
     for label, extra in [("Southern network, 30 places, bar 1.65", []),
-                         ("Northern network, 20 places, bar 1.60", ["--hidden"])]:
+                         ("Northern network, 20 places, bar 1.60", ["--hidden"]),
+                         ("Western network, 25 places, bar 1.62", ["--third"])]:
         # the pinned export first: the one that ships, or the one the verifier holds
         with tempfile.TemporaryDirectory() as tmp:
             d = pathlib.Path(tmp)

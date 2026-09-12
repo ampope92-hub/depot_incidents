@@ -1,11 +1,11 @@
 """Verifier for the programme list.
 
 test.sh compiles the agent's Pascal itself, runs the binary once on the export that shipped and
-once on another network's export it has never seen, and captures each depots.json root-only.
+twice more on other networks' exports it has never seen, and captures each depots.json root-only.
 This module only reads those captures and the keys under /opt: what every depot logged in the
 programme year once logging was mandatory. It never runs agent code.
 
-Every bar here is stated in instruction.md, and the same bar applies to both runs.
+Every bar here is stated in instruction.md, and the same bar applies to every run.
 """
 import csv
 import hashlib
@@ -17,10 +17,13 @@ import pytest
 
 SHIPPED_RUN = pathlib.Path("/opt/run_shipped.json")
 HIDDEN_RUN = pathlib.Path("/opt/run_hidden.json")
+THIRD_RUN = pathlib.Path("/opt/run_third.json")
 SHIPPED_KEY = pathlib.Path("/opt/golden/key.json")
 HIDDEN_KEY = pathlib.Path("/opt/hidden/key.json")
+THIRD_KEY = pathlib.Path("/opt/third/key.json")
 SHIPPED_DATA = pathlib.Path("/app/data")
 HIDDEN_DATA = pathlib.Path("/opt/hidden/data")
+THIRD_DATA = pathlib.Path("/opt/third/data")
 
 SHIPPED_SHA = {
     "incidents.csv": "0517b7d9571d9165783625a414a9c5b169a0633630b3b55865574eb0ed15a554",
@@ -38,6 +41,7 @@ SHIPPED_SHA = {
 RUNS = [
     pytest.param(SHIPPED_RUN, SHIPPED_KEY, SHIPPED_DATA, id="shipped"),
     pytest.param(HIDDEN_RUN, HIDDEN_KEY, HIDDEN_DATA, id="hidden"),
+    pytest.param(THIRD_RUN, THIRD_KEY, THIRD_DATA, id="third"),
 ]
 
 

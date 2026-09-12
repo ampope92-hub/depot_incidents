@@ -40,6 +40,12 @@ RUN chmod 700 /opt/golden && chmod 600 /opt/golden/*
 COPY hidden /opt/hidden
 RUN chmod -R go-rwx /opt/hidden
 
+# A third network, graded the same way as a second run. Two fixed exports can be told apart by
+# their policy values and answered with two embedded qualifying lists; a third one with its own
+# policy values closes that, since there is no map for it to paste.
+COPY third /opt/third
+RUN chmod -R go-rwx /opt/third
+
 COPY . /tests/
 
 WORKDIR /app
