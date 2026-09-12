@@ -28,6 +28,11 @@ SHIPPED_SHA = {
     "depots.csv": "5e61350e742ce436a818389c0e842e04b9ab7a70820fb6b6467954a46475f1c5",
     "policy.json": "880b6a2e8d44c0ebbc4d2120548eb1e7251841be8bde5682965c159dd5bcf6c7",
     "pilot_year.csv": "066fb5a26d0fb2b1bd3151b84d9731b8cc206f762d2ccc33105f0c71cd9f951d",
+    # README.md is hashed too: it is readable and its execute bit alone is stripped, and
+    # dlopen()/mmap(PROT_EXEC) need only the read bit, so an unhashed README could carry a
+    # dynamically loaded payload without tripping any other check. Pinning it closes that off
+    # the same way the other five files are closed: any change to it fails this test.
+    "README.md": "9ade693e554e7a585f15f48f23fbd658cc967b7775908602c9ed4b63cdd1a3cc",
 }
 
 RUNS = [
@@ -85,7 +90,7 @@ def _programme_hours(data_dir):
 
 
 def test_shipped_export_unmodified():
-    """The five files in /app/data are byte-identical to what shipped."""
+    """The six files in /app/data are byte-identical to what shipped."""
     for name, sha in SHIPPED_SHA.items():
         assert _sha(SHIPPED_DATA / name) == sha, f"{name} was altered"
 

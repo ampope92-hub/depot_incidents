@@ -92,11 +92,14 @@ find /app/watch -type f -exec chmod 600 {} +
 [ -f /app/watch/watch ] && chmod 755 /app/watch/watch
 
 # /app/data and /app/out are declared artifacts, so the agent can leave files in both. The export
-# is five files and a README and the five are hashed; anything else the agent parked there is not
-# part of the export and goes before any graded run. That means anything at all that is not one
-# of the six names at the top level, directories included, so a copy of an interpreter filed
-# under an allowed name inside a subdirectory does not survive. What does survive loses its
-# execute bits, since the tool closure below only reaches the system paths.
+# is six files and all six are hashed by test_outputs.py, README.md included, so an unhashed and
+# still-readable file cannot be used to smuggle anything into a run; anything else the agent
+# parked there is not part of the export and goes before any graded run. That means anything at
+# all that is not one of the six names at the top level, directories included, so a copy of an
+# interpreter filed under an allowed name inside a subdirectory does not survive. What does
+# survive loses its execute bits, since the tool closure below only reaches the system paths;
+# read access to the six shipped files stays open because the binary has to read them, which is
+# why they are hashed rather than just closed.
 find /app/data -mindepth 1 -maxdepth 1 \
   ! -name depots.csv ! -name incidents.csv ! -name insurer_claims.csv \
   ! -name pilot_year.csv ! -name policy.json ! -name README.md -exec rm -rf {} +
