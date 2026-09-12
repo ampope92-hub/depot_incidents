@@ -4,17 +4,28 @@ Five files from the safety team's share, pulled for the 2023 programme.
 
 ## incidents.csv
 
-The incident log for 2018 to 2022, one row per logged incident: `incident_id`, `depot`, `date`
-and `severity`, which is `severe` for an injury that needed treatment away from the depot and
-`minor` for everything else, first-aid cases, slips, near misses with a vehicle. Minor incidents
-are entered by the depot itself, on the wall book or the app depending on the depot. Severe
-incidents are entered by the regional safety lead, who is called for every one.
+The incident log for 2018 to 2022, one row per logged incident: `incident_id`, `depot`, `site`,
+`date` and `severity`, which is `severe` for an injury that needed treatment away from the depot
+and `minor` for everything else, first-aid cases, slips, near misses with a vehicle. Minor
+incidents are entered by the depot itself, on the wall book or its own app depending on the
+depot. Severe incidents are entered by the regional safety lead, who is called for every one.
+
+`depot` is the depot whose books the injured person is on: their own depot's book is the one the
+entry goes in, and a severe incident is filed by the lead under the person's cost centre, which
+is what the insurer's claim gets opened against. `site` is where it happened. The two agree on
+most rows and part company when somebody is hurt away from their own depot, which in the North
+is trunk drivers above all: twenty of the depots are hubs, and at each of them the yard through
+the night is mostly drivers from the one depot that runs its trunk routes, so most of what is
+logged at a hub, at some of them nearly all of it, went into that trunking depot's book. An
+ordinary depot gets the odd visitor from its own region. The handsets belong to the site, so
+from January an incident is logged at the depot where it happened.
 
 ## insurer_claims.csv
 
 The employer's liability insurer's claims file for the same years: `claim_id`, `depot`,
-`claim_opened` and `incident_date`. One claim per treated injury, so it holds a row for every
-severe incident already in the log and nothing further. The team keeps it alongside as a
+`claim_opened` and `incident_date`. One claim per treated injury, opened against the cost centre
+of the person hurt, so `depot` is the log's `depot` column and not the site. It holds a row for
+every severe incident already in the log and nothing further. The team keeps it alongside as a
 cross-check; the job doesn't need anything out of it.
 
 ## depots.csv
@@ -29,22 +40,24 @@ less.
 
 `merged_into` is blank except on a depot that was folded into another depot during the log. Fifteen
 Northern depots were, all in January 2019, when the network took over the old regional carriers.
-From the merge the log carries the site's incidents under the surviving depot's id, and the
-programme year does too, but payroll kept the old cost centres, so a merged depot's hours are
+From the merge the log carries the surviving depot's id for the absorbed site, `depot` and `site`
+columns both, and the programme year does too, but payroll kept the old cost centres, so a
+merged depot's hours are
 still on its own row for every year, 2023 included. The two rows are one depot: the hours on both
 rows and the incidents under both ids belong to the survivor, and the merged id itself isn't a
 depot any more.
 
 ## pilot_year.csv
 
-Sixty depots took the app a year before the rest of the network and ran it alongside the wall
-book for that year. This file holds what the app counted for each of them: `depot`, the `year`,
-the `incidents` the app counted and the `labour_hours` they worked, payroll and agency together.
-The app total covers
-everything that happened at the depot that year, minor incidents included. The log for the same
-depots is still just what got written in the book, so it comes to less, and by a different amount
-at each one. It is the run that showed the book was short, and the one place here where a depot's
+Sixty depots took the handsets a year before the rest of the network and ran them alongside the
+wall book for that year. This file holds what the handsets counted at each of them: `depot`, the
+`year`, the `incidents` counted and the `labour_hours` the depot worked, payroll and agency
+together. The count covers everything that happened at the depot that year, minor incidents
+included, whoever was hurt and wherever they were based. The log for the same depots is still
+just what got written in a book, so it comes to a different figure, and by a different amount at
+each one. It is the run that showed the book was short, and the one place here where a depot's
 log and what actually happened sit side by side, so a reading of the log can be checked on it.
+None of the hubs was in the pilot; they went on the handsets with everyone else.
 
 ## policy.json
 
@@ -59,10 +72,11 @@ log and what actually happened sit side by side, so a reading of the log can be 
 
 ## From the memo
 
-The safety league table ranks every depot by logged incidents per ten thousand hours worked
-over the five years of the log. The memo proposes the top twenty for the programme, and those
-are the depots in `league_table_top`. From January the network moves to mandatory logging on
-the app, with every incident, minor or severe, entered before the shift closes.
+The safety league table ranks every depot by the logged incidents on its books per ten thousand
+hours worked over the five years of the log. The memo proposes the top twenty for the programme,
+and those are the depots in `league_table_top`. From January the network moves to mandatory
+logging on the handsets, every incident, minor or severe, entered at the depot where it happened
+before the shift closes.
 
 How the log is built matters for reading it. The same share of incidents are severe at every
 depot, whatever its size or its habits, and every severe incident is logged, because the
@@ -74,4 +88,4 @@ reconciled the league table against that.
 What a depot runs at doesn't shift year on year. The sites and the work stay put, and every time
 the safety team has gone back over it the underlying rate has come out flat, and the programme
 year runs at that same rate. What differs, by a lot, is how much of it each depot gets into the
-log, and from January that stops mattering, with everything going through the app.
+log, and from January that stops mattering, with everything going through the handsets.

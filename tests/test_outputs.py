@@ -23,10 +23,10 @@ SHIPPED_DATA = pathlib.Path("/app/data")
 HIDDEN_DATA = pathlib.Path("/opt/hidden/data")
 
 SHIPPED_SHA = {
-    "incidents.csv": "9c525a342e533b967dd6943190f288d975932599a1a960608db98d1daed79f37",
-    "insurer_claims.csv": "65be8a1904111c3657787c9e26b54b78d30c557cb5f570018d30889aaf607df7",
+    "incidents.csv": "0517b7d9571d9165783625a414a9c5b169a0633630b3b55865574eb0ed15a554",
+    "insurer_claims.csv": "108ff847e33fc27f57704fc9f94e0b75af10f3fecbaee79c20529af8a71495fc",
     "depots.csv": "5e61350e742ce436a818389c0e842e04b9ab7a70820fb6b6467954a46475f1c5",
-    "policy.json": "26184a525350a6bc84866c988340ed818077449e7edeeec95fd860a0b68da205",
+    "policy.json": "880b6a2e8d44c0ebbc4d2120548eb1e7251841be8bde5682965c159dd5bcf6c7",
     "pilot_year.csv": "066fb5a26d0fb2b1bd3151b84d9731b8cc206f762d2ccc33105f0c71cd9f951d",
 }
 

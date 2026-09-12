@@ -7,7 +7,8 @@ set -euo pipefail
 # mostly how often its people log a minor incident, which is anywhere from hardly ever to
 # nearly always. Severe incidents get logged regardless, every one carries an insurer claim,
 # so severe incidents per hour worked over the logged years is what ranks the depots here,
-# the severity read as a code and payroll and agency hours summed.
+# the severity read as a code, each incident counted at the site where it happened rather
+# than under the depot whose books it is on, and payroll and agency hours summed.
 # Written out in watch.pas beside this file.
 install -m 644 "$(dirname "$0")/watch.pas" /app/watch/src/watch.pas
 bash /app/watch/build.sh

@@ -3,15 +3,19 @@
 
 Generates networks with gen_incidents.py across seeds and scores, on each, the lists the likely
 routes produce against the programme year's complete log: the memo's league table (every logged
-incident per hour worked); the same by raw count; the league rate times the programme year's
-budgeted hours, i.e. the memo's expected count; the reference (severe incidents per hour worked,
-payroll and agency hours summed, a merged depot's row folded into its survivor); the insurer's
-claims per hour, which is the same thing from the other file; the severe rate times budgeted
-hours; the generator's own rates; and the two careless readings of the register, the hours taken
-from the payroll columns alone (payroll_hours) and every row ranked as its own depot with
-merged_into ignored (rows_apart). The figure printed for each is the listed depots' incidents per
-hour over the programme year divided by the network's. A list that names a merged id is a miss
-whatever its ratio, since the verifier rejects the id.
+incident on a depot's books per hour worked); the same by raw count; the league rate times the
+programme year's budgeted hours, i.e. the memo's expected count; the reference (severe incidents
+at the site per hour worked, payroll and agency hours summed, a merged depot's row folded into its
+survivor); the severe rate times budgeted hours; the generator's own rates; the three careless
+readings of the export, severe incidents tallied by the depot column, which is the injured
+person's own depot rather than where it happened (home_depot), the insurer's claims per hour,
+which are opened against that same cost centre and so are the same reading from the other file
+(insurer_claims_rate), the hours taken from the payroll columns alone (payroll_hours) and every
+row ranked as its own depot with merged_into ignored (rows_apart); and the blend two real runs
+used, the app's pilot-year count standing in for that year at the pilot depots with the log by
+depot column elsewhere (pilot_blend). The figure printed for each is the listed depots' incidents
+per hour over the programme year divided by the network's. A list that names a merged id is a
+miss whatever its ratio, since the verifier rejects the id.
 
     calibrate.py [--seeds N]
 """
@@ -40,18 +44,27 @@ def routes(d, key):
     row_hours = {k: sum(worked(r, y) for y in range(y0, y1 + 1)) for k, r in rows.items()}
     row_payroll = {k: sum(int(r[f"labour_hours_{y}"]) for y in range(y0, y1 + 1)) for k, r in rows.items()}
     row_next = {k: worked(r, pol["programme_year"]) for k, r in rows.items()}
-    row_logged, row_severe, row_claims = ({k: 0 for k in rows} for _ in range(3))
+    # the log: logged incidents by the depot column (the memo's reading), severe incidents by
+    # site (where they happened) and by the depot column (the injured person's own depot)
+    row_logged, row_severe, row_home, row_claims = ({k: 0 for k in rows} for _ in range(4))
+    home_year = {k: {y: 0 for y in range(y0, y1 + 1)} for k in rows}
     with open(d / "incidents.csv", newline="") as fh:
         for r in csv.DictReader(fh):
             row_logged[r["depot"]] += 1
             if r["severity"] == "severe":
-                row_severe[r["depot"]] += 1
+                row_severe[r["site"]] += 1
+                row_home[r["depot"]] += 1
+                home_year[r["depot"]][int(r["date"][:4])] += 1
     with open(d / "insurer_claims.csv", newline="") as fh:
         for r in csv.DictReader(fh):
             row_claims[r["depot"]] += 1
+    pilot = {}
+    with open(d / "pilot_year.csv", newline="") as fh:
+        for r in csv.DictReader(fh):
+            pilot[r["depot"]] = (int(r["year"]), int(r["incidents"]), int(r["labour_hours"]))
     # per depot, merged rows folded into their survivor: what the verifier scores against
-    hours, payroll, nh, logged, severe, claims, lam_h = ({k: v[k] for k in kept} for v in
-        (row_hours, row_payroll, row_next, row_logged, row_severe, row_claims,
+    hours, payroll, nh, logged, severe, home, claims, lam_h = ({k: v[k] for k in kept} for v in
+        (row_hours, row_payroll, row_next, row_logged, row_severe, row_home, row_claims,
          {k: key["truth"][k]["rate_per_10k_hours"] * row_hours[k] for k in rows}))
     for a, b in into.items():
         hours[b] += row_hours[a]
@@ -59,16 +72,36 @@ def routes(d, key):
         nh[b] += row_next[a]
         logged[b] += row_logged[a]
         severe[b] += row_severe[a]
+        home[b] += row_home[a]
         claims[b] += row_claims[a]
         lam_h[b] += key["truth"][a]["rate_per_10k_hours"] * row_hours[a]
+        for y in home_year[a]:
+            home_year[b][y] += home_year[a][y]
+    # the blend: at a pilot depot the app's count stands in for the pilot year, with the hours as
+    # exposure; every other depot-year is severe incidents by depot column against the pooled
+    # severe share times the hours
+    share = sum(home_year[k][pilot[k][0]] for k in pilot) / sum(pilot[k][1] for k in pilot)
+    blend = {}
+    for k in kept:
+        events = exposure = 0.0
+        for y in range(y0, y1 + 1):
+            if k in pilot and pilot[k][0] == y:
+                events += pilot[k][1]
+                exposure += pilot[k][2]
+            else:
+                events += home_year[k][y]
+                exposure += share * (worked(rows[k], y) + sum(worked(rows[a], y) for a, b in into.items() if b == k))
+        blend[k] = events / exposure
     return {
         "league_table_rate": {k: logged[k] / hours[k] for k in kept},
         "league_table_count": {k: logged[k] for k in kept},
         "league_rate_x_hours": {k: logged[k] / hours[k] * nh[k] for k in kept},
         "reference_severe_rate": {k: severe[k] / hours[k] for k in kept},
-        "insurer_claims_rate": {k: claims[k] / hours[k] for k in kept},
         "severe_rate_x_hours": {k: severe[k] / hours[k] * nh[k] for k in kept},
         "generator_truth": {k: lam_h[k] / hours[k] for k in kept},
+        "home_depot": {k: home[k] / hours[k] for k in kept},
+        "insurer_claims_rate": {k: claims[k] / hours[k] for k in kept},
+        "pilot_blend": blend,
         "payroll_hours": {k: severe[k] / payroll[k] for k in kept},
         "rows_apart": {k: row_severe[k] / row_hours[k] for k in rows},
     }, pol, nh, set(into)

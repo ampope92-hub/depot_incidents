@@ -10,13 +10,17 @@ at sixty depots, and what the app counted for each of them is published, so the 
 book and the truth is on the page. The key holds next year's incident count per depot, once every
 depot logs every incident.
 
-Two things about how the export is written are in the data as well as the README. A depot's hours
-come from two places, payroll for its own staff and the agency invoices for agency staff, so the
-register carries them in two sets of columns, and some depots run mostly on agency labour. And
-some depots were folded into another depot during the log: from the merge the log carries their
+Three things about how the export is written are in the data as well as the README. A depot's
+hours come from two places, payroll for its own staff and the agency invoices for agency staff, so
+the register carries them in two sets of columns, and some depots run mostly on agency labour.
+Some depots were folded into another depot during the log: from the merge the log carries their
 incidents under the surviving depot's id, but payroll kept the old cost centre, so their hours stay
-on their own row, marked with `merged_into`. Both are drawn from their own random streams, so the
-underlying incidents do not depend on them.
+on their own row, marked with `merged_into`. And an incident is logged under the injured person's
+own depot, which is where the wall book is and whose cost centre the insurer's claim is opened
+against, while the `site` column says where it happened: at the hubs most of what happens in the
+yard happens to trunk drivers from the hub's trunking depot, and the app counts an incident where
+it happened. All three are drawn from their own random streams, so the underlying incidents, and
+the key, do not depend on them.
 
     gen_incidents.py <out-dir> <key-dir> [--seed N] [--hidden]
 
@@ -55,6 +59,10 @@ def main():
         n_agency_heavy, heavy_share = 30, (0.55, 0.80)
         # depots folded into another depot in the second year of the log
         n_merged = 15
+        # hubs: how many, the share of what happens in a hub's yard that happens to the trunk
+        # drivers from its trunking depot, the share of visitors at an ordinary depot, and how
+        # steeply hub status follows the depot's underlying rate (the hubs are the busy yards)
+        n_hubs, hub_visitor, other_visitor, hub_power = 20, (0.70, 0.90), (0.0, 0.06), 3.0
     else:
         network, n_depots, years = "Southern parcel network", 180, 5
         severe_share, rate_mu, rate_sigma = 0.10, math.log(4.0), 0.5
@@ -65,6 +73,7 @@ def main():
         n_pilot_default = 60
         n_agency_heavy, heavy_share = 4, (0.30, 0.45)
         n_merged = 2
+        n_hubs, hub_visitor, other_visitor, hub_power = 4, (0.35, 0.50), (0.0, 0.04), 2.0
     last_year = first_year + years - 1
     next_year = last_year + 1
 
@@ -127,8 +136,56 @@ def main():
     free = [d[0] for d in depots if d[0] not in pilot_set]
     picked = merge_rng.sample(free, 2 * n_merged)
     merged_into = {picked[2 * i]: picked[2 * i + 1] for i in range(n_merged)}
-    incidents = [(i, merged_into.get(d, d) if r.year >= merge_year else d, r, s) for i, d, r, s in incidents]
-    claims = [(c, merged_into.get(d, d) if r.year >= merge_year else d, o, r) for c, d, o, r in claims]
+    # Where an incident happens and whose books the injured person is on are two different
+    # depots when the person is visiting. The hubs are where the trunking is: through the night
+    # a hub's yard is mostly trunk drivers from its trunking depot, the depot in the region that
+    # runs the trunk routes into it, and most of what happens in the yard happens to them. An
+    # ordinary depot sees the odd visitor from elsewhere in its region. The log's depot column
+    # is the injured person's own depot (the wall book is theirs, the cost centre is theirs and
+    # the claim is opened against it); the site column is where it happened, and the app, being
+    # the site's handset, counts the incident there. The key above is by site, so nothing in it
+    # moves with this. Own stream, so the incidents above do not move either. The pilot ran at
+    # ordinary depots, the hubs went on the app with the rest of the network, so a hub is never
+    # a pilot depot. Hub status is drawn with a weight that rises steeply in the depot's
+    # underlying rate: the hubs are the network's busy yards.
+    site_rng = random.Random(a.seed + 6017)
+    absorbed = set(merged_into)
+    by_region = {}
+    for d, region, _, _, _ in depots:
+        if d not in absorbed:
+            by_region.setdefault(region, []).append(d)
+    lam_of = {d: lam for d, _, _, lam, _ in depots}
+    pool = [d for d, *_ in depots if d not in absorbed and d not in pilot_set]
+    hubs = []
+    for _ in range(n_hubs):
+        pick = site_rng.choices(pool, weights=[lam_of[d] ** hub_power for d in pool], k=1)[0]
+        hubs.append(pick)
+        pool.remove(pick)
+    hub_set = set(hubs)
+    visitor, visitors_from = {}, {}
+    for d, region, _, _, _ in depots:
+        if d in absorbed:
+            visitor[d], visitors_from[d] = 0.0, []
+        elif d in hub_set:
+            visitor[d] = site_rng.uniform(*hub_visitor)
+            others = [x for x in by_region[region] if x != d and x not in hub_set]
+            visitors_from[d] = site_rng.sample(others, 1)
+        else:
+            visitor[d] = site_rng.uniform(*other_visitor)
+            visitors_from[d] = [x for x in by_region[region] if x != d]
+
+    def home_of(site):
+        if visitors_from[site] and site_rng.random() < visitor[site]:
+            return site_rng.choice(visitors_from[site])
+        return site
+    incidents = [(i, home_of(d), d, r, s) for i, d, r, s in incidents]
+    severe_rows = [x for x in incidents if x[4] == "severe"]
+    claims = [(c, h, o, r) for (c, d, o, r), (_, h, _, _, _) in zip(claims, severe_rows)]
+
+    def fold(d, r):
+        return merged_into.get(d, d) if r.year >= merge_year else d
+    incidents = [(i, fold(h, r), fold(d, r), r, s) for i, h, d, r, s in incidents]
+    claims = [(c, fold(d, r), o, r) for c, d, o, r in claims]
     for old, new in merged_into.items():
         key_counts[new] += key_counts.pop(old)
 
@@ -140,12 +197,12 @@ def main():
         for d in pilot:
             n, h = pilot_rows[d]
             w.writerow([d, last_year, n, h])
-    incidents.sort(key=lambda r: (r[2], r[0]))
+    incidents.sort(key=lambda r: (r[3], r[0]))
     with open(out / "incidents.csv", "w", newline="") as fh:
         w = csv.writer(fh)
-        w.writerow(["incident_id", "depot", "date", "severity"])
+        w.writerow(["incident_id", "depot", "site", "date", "severity"])
         for r in incidents:
-            w.writerow([r[0], r[1], r[2].isoformat(), r[3]])
+            w.writerow([r[0], r[1], r[2], r[3].isoformat(), r[4]])
     claims.sort(key=lambda r: (r[2], r[0]))
     with open(out / "insurer_claims.csv", "w", newline="") as fh:
         w = csv.writer(fh)
@@ -198,8 +255,10 @@ def main():
                   fh, indent=2)
         fh.write("\n")
     tot = sum(key_counts.values())
+    away = sum(1 for r in incidents if r[1] != r[2])
     print(f"{network}: {n_depots} depots, {len(incidents)} logged incidents ({len(claims)} severe), "
-          f"next year {tot} incidents")
+          f"{away} logged away from the injured person's own depot, next year {tot} incidents")
+    print("hubs and their trunking depot: " + ", ".join(f"{h} ({visitors_from[h][0]}, {visitor[h]:.0%})" for h in hubs))
 
 
 if __name__ == "__main__":

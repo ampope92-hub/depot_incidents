@@ -10,11 +10,13 @@
   A depot's rate does not move from one year to the next, so the severe rate over the logged
   years is the rate it will be running at in the programme year.
 
-  Two things about the export. The hours a depot works sit in two sets of columns, payroll and
-  agency, and the rate is per hour worked, so both are summed. And a depot the register marks as
+  Three things about the export. The hours a depot works sit in two sets of columns, payroll and
+  agency, and the rate is per hour worked, so both are summed. A depot the register marks as
   merged into another is the same depot as its survivor: from the merge its incidents are logged
   under the survivor's id while payroll kept its hours on the old row, so the two rows are folded
-  into one before anything is ranked, and the merged id is not a candidate. }
+  into one before anything is ranked, and the merged id is not a candidate. And the log's depot
+  column is the injured person's own depot, not where it happened: the site column is where it
+  happened, and the app counts an incident where it happened, so the tally here is by site. }
 program watch;
 {$mode objfpc}{$H+}
 uses
@@ -137,25 +139,36 @@ begin
   end;
 end;
 
+{ An incident is tallied at the site where it happened, not under the depot column, which is
+  the depot the injured person is on the books of. Columns are found by name. }
 procedure LoadIncidents;
 var
   rows, f: TStringList;
-  i, d, y: Integer;
+  i, d, y, siteCol, dateCol, sevCol: Integer;
 begin
   rows := TStringList.Create;
   f := TStringList.Create;
   try
     rows.LoadFromFile(dataDir + '/incidents.csv');
+    Split(rows[0], f);
+    siteCol := f.IndexOf('site');
+    dateCol := f.IndexOf('date');
+    sevCol := f.IndexOf('severity');
+    if (siteCol < 0) or (dateCol < 0) or (sevCol < 0) then
+    begin
+      writeln(StdErr, 'incidents.csv needs site, date and severity columns');
+      Halt(1);
+    end;
     for i := 1 to rows.Count - 1 do
     begin
       if Trim(rows[i]) = '' then Continue;
       Split(rows[i], f);
-      y := StrToInt(Copy(f[2], 1, 4));
-      d := FindDepot(f[1]);
+      y := StrToInt(Copy(f[dateCol], 1, 4));
+      d := FindDepot(f[siteCol]);
       if d < 0 then Continue;
       if (y < yearFrom) or (y > yearTo) then Continue;
       Inc(depots[d].logged);
-      if f[3] = 'severe' then Inc(depots[d].severe);
+      if f[sevCol] = 'severe' then Inc(depots[d].severe);
     end;
   finally
     rows.Free;
