@@ -1,0 +1,32 @@
+{
+  "network": "Northern parcel network",
+  "log_years": [
+    2018,
+    2022
+  ],
+  "programme_year": 2023,
+  "list_size": 20,
+  "minimum_rate_ratio": 1.6,
+  "league_table_top": [
+    "D059",
+    "D040",
+    "D067",
+    "D048",
+    "D138",
+    "D099",
+    "D113",
+    "D104",
+    "D010",
+    "D137",
+    "D076",
+    "D101",
+    "D006",
+    "D014",
+    "D034",
+    "D036",
+    "D047",
+    "D024",
+    "D022",
+    "D004"
+  ]
+}

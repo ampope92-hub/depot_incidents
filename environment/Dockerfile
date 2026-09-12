@@ -1,19 +1,22 @@
-# Agent image. Nothing from tests/ or solution/ may ever be copied in here.
-#
-# Pin the base by digest so the image can never drift. To re-pin after changing the
-# tag:  docker buildx imagetools inspect <image>:<tag>
-# REPLACE this base with whatever your task actually needs.
-FROM public.ecr.aws/docker/library/gcc:13-bookworm@sha256:930f2ebe239275fa67226654cb79273ea34eee672ae61c8a39f689c37fb7ac5c
+# The safety team's analyst tooling is Free Pascal, so the agent's project is compiled with fpc.
+# Canonical Python base: the harness runs on it, and nothing here needs a numerics stack.
+FROM public.ecr.aws/docker/library/python:3.13-slim-bookworm@sha256:01f42367a0a94ad4bc17111776fd66e3500c1d87c15bbd6055b7371d39c124fb
 
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
+
+# fpc is the whole toolchain: the tool is written against the Free Pascal run-time units
+# (SysUtils, Classes and friends), with no package fetched at solve time on an offline box.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        asciinema \
-        ca-certificates \
-        python3 \
+        fpc \
         tmux \
+        asciinema \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# The project the agent completes, and the network's export.
+COPY watch /app/watch
+COPY data /app/data
+RUN chmod +x /app/watch/build.sh && mkdir -p /app/watch/obj /app/out
 
-COPY app/src/ /app/src/
-COPY app/data/ /app/data/
+WORKDIR /app

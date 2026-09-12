@@ -1,100 +1,136 @@
-"""Verifier for the skeleton task.
+"""Verifier for the programme list.
 
-Two things are graded independently. The report has to match the approved bytes for the
-shipped inputs, and the agent's own program has to reproduce those bytes when re-run
-against inputs it has never seen. The second is what stops a hand-written report from
-passing: the artifact alone is cheap to fake, re-deriving it on held-out data is not.
+test.sh compiles the agent's Pascal itself, runs the binary once on the export that shipped and
+once on another network's export it has never seen, and captures each depots.json root-only.
+This module only reads those captures and the keys under /opt: what every depot logged in the
+programme year once logging was mandatory. It never runs agent code.
 
-Replace the whole file for a real task, but keep the shape: golden bytes, a held-out
-re-run, and a determinism check.
+Every bar here is stated in instruction.md, and the same bar applies to both runs.
 """
-
+import csv
 import hashlib
 import json
-import shutil
-import subprocess
-from pathlib import Path
+import os
+import pathlib
 
 import pytest
 
-APP = Path("/app")
-SRC = APP / "src" / "summarize.py"
-REPORT = APP / "out" / "report.json"
-DATA = APP / "data"
-HOLDOUT = Path("/tests/holdout")
+SHIPPED_RUN = pathlib.Path("/opt/run_shipped.json")
+HIDDEN_RUN = pathlib.Path("/opt/run_hidden.json")
+SHIPPED_KEY = pathlib.Path("/opt/golden/key.json")
+HIDDEN_KEY = pathlib.Path("/opt/hidden/key.json")
+SHIPPED_DATA = pathlib.Path("/app/data")
+HIDDEN_DATA = pathlib.Path("/opt/hidden/data")
 
-# Scratch space owned by the sandbox user; see tests/Dockerfile.
-WORK_OUT = Path("/work/out")
+SHIPPED_SHA = {
+    "incidents.csv": "9c525a342e533b967dd6943190f288d975932599a1a960608db98d1daed79f37",
+    "insurer_claims.csv": "65be8a1904111c3657787c9e26b54b78d30c557cb5f570018d30889aaf607df7",
+    "depots.csv": "5e61350e742ce436a818389c0e842e04b9ab7a70820fb6b6467954a46475f1c5",
+    "policy.json": "26184a525350a6bc84866c988340ed818077449e7edeeec95fd860a0b68da205",
+    "pilot_year.csv": "066fb5a26d0fb2b1bd3151b84d9731b8cc206f762d2ccc33105f0c71cd9f951d",
+}
 
-SANDBOX_UID = 12000
-DROP_PRIVILEGES = [
-    "setpriv",
-    f"--reuid={SANDBOX_UID}",
-    f"--regid={SANDBOX_UID}",
-    "--clear-groups",
+RUNS = [
+    pytest.param(SHIPPED_RUN, SHIPPED_KEY, SHIPPED_DATA, id="shipped"),
+    pytest.param(HIDDEN_RUN, HIDDEN_KEY, HIDDEN_DATA, id="hidden"),
 ]
 
-# SHA-256 of the report each input set must produce. Generated from solution/src.
-EXPECTED_PRIMARY = "60fec4718722649de61a0a56094fa49cf19597bd942244b27c77cea81352ce57"
-EXPECTED_HOLDOUT = {"h1": "a3cca7560ba22f8ec8e43ead53cee7566e713086e19c21ef42bd785bc7da77ba"}
+
+def _open(path, mode="r"):
+    """Open without following a final symlink, so a read can never be redirected into /opt."""
+    return os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), mode)
 
 
-def sha256(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+def _sha(path):
+    with _open(path, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest()
 
 
-def run_agent_program(data_dir, out_path):
-    """Runs the agent's own program, unprivileged, against a directory of our choosing."""
-    return subprocess.run(
-        DROP_PRIVILEGES
-        + ["python3", str(SRC), "--data", str(data_dir), "--out", str(out_path)],
-        capture_output=True,
-        text=True,
-        timeout=120,
+def _load(path):
+    assert path.exists() and path.stat().st_size > 0, (
+        f"{path.name}: no depots.json was written for this run"
+    )
+    with _open(path) as fh:
+        text = fh.read()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        pytest.fail(f"{path.name}: not valid JSON ({e}): {text[:200]!r}")
+
+
+def _key(path):
+    with open(path) as fh:
+        return json.load(fh)
+
+
+def _policy(data_dir):
+    with open(data_dir / "policy.json") as fh:
+        return json.load(fh)
+
+
+def _programme_hours(data_dir):
+    """Hours worked in the programme year for every depot that exists in it: the register's payroll
+    hours and agency hours together, with a row the register marks merged_into another folded into
+    that depot, which is how instruction.md and the README define a depot and its hours. A merged
+    id is not a depot and is not a key here."""
+    year = _policy(data_dir)["programme_year"]
+    with open(data_dir / "depots.csv", newline="") as fh:
+        rows = list(csv.DictReader(fh))
+    worked = lambda row: int(row[f"labour_hours_{year}"]) + int(row[f"agency_hours_{year}"])
+    hours = {row["depot"]: worked(row) for row in rows if not row["merged_into"]}
+    for row in rows:
+        if row["merged_into"]:
+            hours[row["merged_into"]] += worked(row)
+    return hours
+
+
+def test_shipped_export_unmodified():
+    """The five files in /app/data are byte-identical to what shipped."""
+    for name, sha in SHIPPED_SHA.items():
+        assert _sha(SHIPPED_DATA / name) == sha, f"{name} was altered"
+
+
+@pytest.mark.parametrize("run_path,key_path,data_dir", RUNS)
+def test_list_shape(run_path, key_path, data_dir):
+    """One object with exactly the key depots: an array of exactly list_size depot ids from that
+    run's depots.csv, none of them marked merged into another, no repeats."""
+    r = _load(run_path)
+    assert isinstance(r, dict) and set(r) == {"depots"}, (
+        f"{run_path.name}: expected exactly the key depots"
+    )
+    lst = r["depots"]
+    assert isinstance(lst, list), f"{run_path.name}: depots is not an array"
+    assert all(isinstance(x, str) for x in lst), f"{run_path.name}: depots must be depot ids"
+    size = _policy(data_dir)["list_size"]
+    assert len(lst) == size, f"{run_path.name}: {len(lst)} depots listed, the policy asks for exactly {size}"
+    assert len(lst) == len(set(lst)), f"{run_path.name}: a depot is listed more than once"
+    unknown = sorted(set(lst) - set(_programme_hours(data_dir)))
+    assert not unknown, (
+        f"{run_path.name}: {len(unknown)} listed ids are not depots of this export (not in depots.csv, "
+        f"or merged into another depot), e.g. {unknown[:5]}"
     )
 
 
-def test_report_exists():
-    """The declared artifact was produced at the documented path."""
-    assert REPORT.is_file(), f"{REPORT} was not created"
-
-
-def test_report_is_valid_json():
-    """The report parses and carries the documented top-level keys."""
-    data = json.loads(REPORT.read_text())
-    assert set(data) == {"files", "total_words"}, f"unexpected top-level keys: {sorted(data)}"
-
-
-def test_report_matches_approved_bytes():
-    """The report is byte-identical to the approved output for the shipped inputs."""
-    actual = sha256(REPORT)
-    assert actual == EXPECTED_PRIMARY, (
-        f"report.json does not match the approved bytes\n"
-        f"  expected sha256 {EXPECTED_PRIMARY}\n  actual   sha256 {actual}"
+@pytest.mark.parametrize("run_path,key_path,data_dir", RUNS)
+def test_programme_year_rate(run_path, key_path, data_dir):
+    """Over the programme year the listed depots' incidents per hour worked come to at least
+    minimum_rate_ratio times the whole network's."""
+    lst = _load(run_path)["depots"]
+    counts = _key(key_path)["programme_year_incidents"]
+    hours = _programme_hours(data_dir)
+    floor = _policy(data_dir)["minimum_rate_ratio"]
+    unknown = sorted(set(lst) - set(hours))
+    assert not unknown, (
+        f"{run_path.name}: {len(unknown)} listed ids are not depots of this export, e.g. {unknown[:5]}, "
+        f"so their programme-year rate is undefined"
+    )
+    listed = sum(counts[d] for d in lst) / sum(hours[d] for d in lst)
+    network = sum(counts.values()) / sum(hours.values())
+    ratio = listed / network
+    assert ratio >= floor, (
+        f"{run_path.name}: the listed depots ran at {ratio:.3f} times the network's incident rate in the "
+        f"programme year, under the {floor:.2f} the policy requires. A depot's place in the league table "
+        f"is not the same thing as its incident rate"
     )
 
 
-@pytest.mark.parametrize("name", sorted(EXPECTED_HOLDOUT))
-def test_holdout_reproduces_approved_bytes(name):
-    """Re-running the agent's program on unseen inputs reproduces the approved bytes.
-
-    This is the anti-cheat axis: it proves the report on disk was generated by the
-    program rather than written by hand or pinned to the shipped fixtures.
-    """
-    out = WORK_OUT / f"{name}.json"
-    result = run_agent_program(HOLDOUT / name, out)
-    assert result.returncode == 0, f"program failed on held-out set {name}:\n{result.stderr}"
-
-    actual = sha256(out)
-    assert actual == EXPECTED_HOLDOUT[name], (
-        f"held-out set {name} did not reproduce the approved bytes\n"
-        f"  expected sha256 {EXPECTED_HOLDOUT[name]}\n  actual   sha256 {actual}"
-    )
-
-
-def test_output_is_deterministic():
-    """Two runs over the same inputs produce identical bytes."""
-    first, second = WORK_OUT / "det-1.json", WORK_OUT / "det-2.json"
-    for out in (first, second):
-        assert run_agent_program(DATA, out).returncode == 0, "program failed on shipped inputs"
-    assert sha256(first) == sha256(second), "program output is not deterministic"

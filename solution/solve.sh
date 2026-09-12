@@ -1,20 +1,15 @@
-#!/bin/bash
-# Oracle solution.
-#
-# Document what was actually wrong and how the fix was derived — a reviewer reads this
-# to judge whether the task is solvable by reasoning rather than by guessing:
-#
-#   src/summarize.py   Three defects. Entries came back in filesystem order instead of
-#                      sorted by name; total_words counted files rather than words; and
-#                      the report was written without its trailing newline.
-#
-# Harbor mounts solution/ at /solution/ and runs this script as the oracle agent.
+#!/usr/bin/env bash
 set -euo pipefail
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-cp "$HERE/src/summarize.py" /app/src/summarize.py
-
-python3 /app/src/summarize.py --data /app/data --out /app/out/report.json
-
-sha256sum /app/out/report.json
+# Picks the depots for the programme.
+#
+# The memo's league table is logged incidents per hour worked, and a depot's place in it is
+# mostly how often its people log a minor incident, which is anywhere from hardly ever to
+# nearly always. Severe incidents get logged regardless, every one carries an insurer claim,
+# so severe incidents per hour worked over the logged years is what ranks the depots here,
+# the severity read as a code and payroll and agency hours summed.
+# Written out in watch.pas beside this file.
+install -m 644 "$(dirname "$0")/watch.pas" /app/watch/src/watch.pas
+bash /app/watch/build.sh
+mkdir -p /app/out
+/app/watch/watch /app/data /app/out/depots.json

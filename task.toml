@@ -1,77 +1,82 @@
-# TB3.0 task manifest.
-#
-# Every field below is required unless marked optional. The four prose fields
-# (difficulty/solution/verification/relevant_experience) are what a reviewer reads
-# first — write them last, once the task actually works, and write them honestly.
+name = "depot-incidents"
 
-name = "REPLACE-task-slug"
-
-# Paths the SEPARATE verifier reads out of the agent's final container. Declare the
-# whole project directory when the verifier needs to rebuild or re-run the agent's
-# own sources, not just inspect an output file.
-artifacts = ["/app/"]
+# The verifier reads only these paths from the agent's final environment. Must stay top-level:
+# nested under [verifier] the value is silently dropped and the verifier receives nothing.
+artifacts = [
+    "/app/watch/src/",
+    "/app/watch/build.sh",
+    "/app/data/",
+    "/app/out/",
+]
 
 [metadata]
-author_name = "REPLACE"
-author_email = "REPLACE"
+author_name = "anonymous"
+author_email = "anonymous"
+category = "Operations"
+subcategory = "Logistics"
+tags = ["pascal", "safety", "incident-log", "ranking", "depots"]
+languages = ["pascal"]
+difficulty = "core"
+expert_time_estimate_hours = 3
 
-# category must be one of: Science, Software, ML, Operations, Security, Hardware, Media
-# subcategory is an open list — see the taxonomy for the conventional values.
-category = "REPLACE"
-subcategory = "REPLACE"
-tags = ["REPLACE", "3-to-6", "descriptive", "keywords"]
-languages = ["REPLACE"]
+difficulty_explanation = """
+The safety memo ranks 180 depots by logged incidents per hour worked over five years and proposes the top thirty for the programme. Every figure in that table is arithmetically right. What it measures is not what the memo thinks it measures, because a depot only appears in the log to the extent that its people write things down. The README states how the log is filled in: a fixed share of incidents at any depot are severe, every severe one is entered by the regional lead and carries an insurer claim, and minor incidents are entered by the depot itself at whatever rate that depot logs them. In the shipped network that rate runs from essentially never to essentially always, with a median around half, so a wall-book depot with a genuinely bad rate can sit mid-table while an app depot with a mild one sits near the top. The league table is a ranking of paperwork as much as of risk.
 
-# One of: base, core, advanced, frontier — set from measured pass rates, not by feel.
-difficulty = "REPLACE"
-expert_time_estimate_hours = 0  # REPLACE with a real best-case estimate for a domain expert
+The product is the list itself: which depots go on the programme, scored on what they actually log in the programme year once every incident goes through the app and the count is complete. The bar is the incidents per hour worked at the listed depots over that year divided by the figure for the whole network, and it is 1.65 on the Southern network and 1.60 on the Northern. The memo's own thirty come in at 1.443. Ranking by logged count instead of rate gives 1.403, and multiplying the logged rate by the programme year's budgeted hours, which is the memo's expected-incident figure, gives 1.278. Severe incidents per hour worked gives 1.978, and the insurer's claims file gives the identical list from the other direction. Seventeen of the thirty are common to both lists, so the memo is not nonsense, it is thirteen places wrong, and thirteen places is the whole margin. Weighting the severe rate by the programme year's budgeted hours, which ranks by expected count rather than by rate, gives 1.670 and clears the Southern bar; on the Northern network, where the mergers below produced some big combined depots, it lands at 1.452 and misses, which is what the instruction's rate ratio says it should, since the places go where the rate is highest and not where the depot is biggest. The bar separates lists built on the severe rate from lists built on the logged total, which is the distinction the log itself carries.
 
-difficulty_explanation = """\
-REPLACE. What specifically defeats a strong agent here? Name the concrete traps and \
-why partial progress still fails. A reviewer who does not know your domain should \
-finish this paragraph understanding the shape of the difficulty.\
+The second export is the Northern network, 150 depots, twenty places, a different severe share and a different spread of logging habit. Its memo list comes in at 1.446 and its severe-rate list at 1.974, and only six depots are common to the two, so a program that carries the shipped list or the shipped ranking fails there while one that reads the log it is handed passes. Across twelve generated networks per side the memo route clears the bar five times in twelve on the Southern shape and five in twelve on the Northern, while the severe route clears it twelve times in twelve on both; the shipped and hidden instances are pinned seeds where the separation is clean. The data are synthetic, from solution/gen_incidents.py, and solution/calibrate.py reproduces every figure above.
+
+The register is also written the way a payroll system writes one, and the README of each network says how, as does the instruction. A depot's hours sit in two sets of columns, labour_hours_<year> from payroll for its own staff and agency_hours_<year> from the agency invoices, and a depot's hours are the two together. Four shipped depots run a third or more of their hours on agency staff and none over half, so summing payroll alone still gives 1.983 there; thirty Northern depots run more than half their hours on agency staff, their rate is inflated two to four times when the agency columns are left out, and that list comes in at 1.517. And some depots were folded into another depot in the second year of the log, marked in a merged_into column: from the merge the log carries the site's incidents under the survivor's id, but payroll kept the old cost centre, so the merged depot's hours stay on its own row every year. The two rows are one depot. A program that ranks the rows as they stand gives every survivor the absorbed site's incidents against only its own hours, so its rate is inflated by roughly the size of the site it took over; the merged id itself is deflated and is not a depot the verifier accepts. Two shipped mergers sit outside the top thirty either way, so that program still gives 1.978 there; fifteen Northern mergers put their survivors into the top twenty and that list comes in at 1.525. Across twelve generated networks per side the payroll-only reading never clears the Northern bar and the rows-as-they-stand reading clears it three times, while both clear the Southern bar every time, so each is a mistake a program can carry through the shipped export and only meets on the other one.
+
+The implementation is small: two csv reads, a per-depot tally, a division and a partial sort, in Free Pascal against the run-time units with the JSON written by hand. The difficulty is in reading the export: which column of the log is complete, and what a depot and its hours are in the register. A correct, careful program that ranks the league table the memo ranks produces a list that misses the bar by a fifth on both networks.
+
+This is the job of a safety analyst or the operations manager who owns a programme budget, and mistaking reporting rate for incident rate is the classic way that budget lands in the wrong depots. Regulators and insurers use claim counts for exactly this reason.
 """
 
-solution_explanation = """\
-REPLACE. The reference approach at a level someone could follow without reading \
-solve.sh — what has to be discovered, in what order, and what the key insight is.\
+solution_explanation = """
+The reference (solution/solve.sh) installs src/watch.pas and runs the project's build script, then runs the binary on /app/data. It reads policy.json for the log years, the programme year and the number of places, tallies the incident log per depot, sums the hours worked per depot over the log years from the register, payroll and agency columns together, and folds each row the register marks merged_into another into that depot, hours and incidents both, dropping the merged id.
+
+The ranking is severe incidents over the log years divided by hours worked over the log years, and the top list_size depots go on the list. Nothing else is weighted in. The insurer's claims file gives the same ranking, one row per severe incident, and either is a correct reading; the reference uses the log because it is one file rather than two. Output is one JSON object with the single key depots, written by hand since the run-time units carry no serialiser.
+
+On the shipped network that list runs at 1.978 times the network's rate in the programme year against a bar of 1.65, and on the Northern network at 1.974 against 1.60. The wrong routes are each one changed expression in the same program: ranking by every logged incident per hour, the memo's league table, gives 1.443 and 1.446, multiplying that rate by the programme year's budgeted hours gives 1.278 and 1.201, summing the payroll columns without the agency ones gives 1.983 and 1.517, and ranking the register's rows as they stand with merged_into ignored gives 1.978 and 1.525.
 """
 
-verification_explanation = """\
-REPLACE. What the verifier grades, how it grades it, and why passing it is only \
-possible by actually doing the work. Call out each independent axis of failure.\
+verification_explanation = """
+The verifier runs in its own container. It collects the agent's Pascal sources, the build script and the shipped export as artifacts, compiles src/watch.pas itself with fpc as an unprivileged build user, and runs the binary it produced, so the graded list always comes out of a clean build of the agent's own code. The agent's build script is not run: a script that produced the list some other way would otherwise pass with the stub still in place. Object files are directed to their own directory so nothing lands beside the sources.
+
+Compiling and running means the verifier executes code the agent wrote, so it does not do that as root. test.sh hands the project to the build user through setpriv with supplementary groups cleared and no-new-privileges set, runs the binary from /app/watch, the directory the instruction documents, and while it runs every executable on the system paths is closed to that user, found by walking those directories rather than by keeping a list, so the ranking cannot come out of a Python or an awk the binary shells out to; the cheat_python_shim arm is that construction and scores 0. Closing the system paths is not sufficient on its own, because a helper binary shipped inside the project directory would still be runnable, so before each graded run every file under /app/watch except the binary just built has its execute bits stripped. Each run happens in its own session and its process group is torn down afterwards, then every process that user still owns is swept, so nothing the agent started is alive when the reward is written. The two runs are given different output paths, so a program that writes a fixed destination rather than the path it is handed loses its second run. Output is staged only if it is a regular file, moved to a root-owned path, and pytest reads it with O_NOFOLLOW; pytest never runs the agent's binary. The keys live under /opt, readable only by root, and the /tests mount is closed to the build user before anything untrusted starts; if either is still reachable the run is abandoned with reward 0. pytest is called by full path with -P so nothing dropped into the working directory can shadow it.
+
+Then the same binary is run on the Northern network's export, staged into a freshly named directory only after the build has finished and its processes are gone, with its own README beside it, and removed afterwards. That network has 150 depots against 180, twenty places against thirty, a different severe share and a different spread of logging habit. Nothing in the policy is the same on both: the log runs 2018 to 2022 rather than 2020 to 2024, the programme year is 2023 rather than 2025, the list is twenty rather than thirty and the rate bar is 1.60 rather than 1.65. The list size differs and is not a fixed fraction of the register either, thirty of 180 against twenty of 150, so neither a constant nor a count read off depots.csv survives the second run.
+
+Five checks run and every one is a requirement instruction.md states. The five shipped files are unaltered by sha256. On each of the two graded runs the output is one object with exactly the key depots, the list holds exactly the policy's list_size depot ids drawn from that run's register, none of them marked merged into another, with no repeats, and over the programme year the incidents per hour worked at the listed depots, payroll and agency hours together and a merged row folded into its survivor as instruction.md defines a depot and its hours, come to at least the policy's minimum_rate_ratio times the figure for the whole network. A merged id is not a depot of the export and is rejected by name. That count is the key: what each depot logged in the programme year once logging was mandatory, a count per depot the binary never sees, so the bar is a performance bar on the agent's list against labels the verifier holds rather than a comparison against a private estimate.
+
+The report used to carry a second figure, an estimate of the pilot year for depots whose app total the export held back, and it is gone. Graded as a total across those depots it could be satisfied without reading the log at all: handing every one of them the average of the published pilot depots came within three percent on the shipped network and inside the tolerance on the other, so a submission that never opened incidents.csv passed that half of the report. Grading it depot by depot was not the answer either, because one depot-year carries too few severe incidents for any correct method to hit a tight figure. Taking it out leaves the list, which is what the task is about, and the list cannot be produced without the same reading of the log.
+
+The export still carries pilot_year.csv, for all sixty depots that ran the app beside the wall book for a year. It is evidence rather than an input: it is the one place where what a depot logged and what actually happened sit side by side, so a reading of the log can be checked against it before it is used on the rest of the network. Nothing in the job needs a figure out of it. Both list bars are measured rather than chosen: across twelve generated networks the severe rate averages 1.889 on the Southern shape and 1.795 on the Northern and clears its bar on every one of the twelve on both, as does the generator's own rate, while the memo's ranking averages 1.609 and 1.526 and clears it on five of twelve on each. The shipped instances sit further apart than those averages suggest, at 1.443 against 1.978 and 1.446 against 1.974, so the reading the task is about is the one that passes on the export a solver actually reads. The Southern bar stays at 1.65 rather than going higher because weighting the severe rate by budgeted hours lands at 1.670 there, and a list built on the severe signal should not fail on the Southern export for ranking by count. Seven arms run through the real verifier and each scores 0, and each fails on its own mechanism rather than on the output shape: oracle_league_table, the memo's ranking, and oracle_logged_x_hours, the logged rate turned into an expected count, both fail the programme-year rate on both runs and nothing else; oracle_payroll_hours, the reference summing the payroll columns without the agency ones, and oracle_rows_apart, the reference ranking every register row as its own depot with merged_into ignored, both pass the shipped run whole and fail the Northern run on the rate alone; cheat_frozen_list writes the shipped answer into the source, passes the shipped run whole and fails the Northern one on the list shape and the rate together; and cheat_python_shim hands the job to a Python script and produces nothing, as does the do-nothing arm. The oracle and an oracle with every artifact back-dated both score 1. solution/gen_incidents.py regenerates both exports and both keys byte for byte, the Southern network with no arguments and the Northern with --hidden.
 """
 
-# NOTE: this one is a claim about you, not about the task. Rewrite it to match your
-# actual background before submitting; generic statements fail review.
-relevant_experience = """\
-REPLACE. The professional experience that qualifies you to set the difficulty and \
-correctness bar for this task.\
+relevant_experience = """
+I have written a run of tasks for this edition, a number of them accepted, around one observation: the tasks that measure anything are the ones where the agent's own careful work confirms the wrong answer. Here the wrong answer is a league table that is arithmetically perfect and answers a different question, and the fix is not a better model but noticing which column of the log is complete. I have built the operational version of this before, where a reported rate and a real rate diverge because the reporting is voluntary, and the giveaway is always a severity split or an external file that does not depend on anyone choosing to fill a form in.
 """
-
-# Network policy is set per phase. [environment] is the baseline and MUST be
-# "public" so the image build can install dependencies — the harnesses require it.
-# [agent] and [verifier] are the author's choice: either "public" or "no-network".
-# Those two values are the only permitted ones. Set all three phases explicitly
-# rather than relying on inheritance from the baseline.
 
 [verifier]
-timeout_sec = 600
-network_mode = "no-network"
-# "separate" is required: the verifier runs in its own container built from
-# tests/Dockerfile, after the agent's container is torn down. Tests and oracle data
-# are therefore never visible to the agent.
+# One compile and two runs of the agent's program. fpc is fast and there is no dependency tree,
+# but 1800 is the floor the platform requires.
+timeout_sec = 1800
 environment_mode = "separate"
+network_mode = "no-network"
 
 [agent]
-timeout_sec = 3600
-# "no-network" if the task is meant to be solved offline; "public" if it genuinely
-# needs internet access. REPLACE to match your task.
+timeout_sec = 5400
+# Offline by design: the tool is written against the Free Pascal run-time units, and network
+# access would let the agent pull a package rather than read the log.
 network_mode = "no-network"
 
 [environment]
+# Must be "public" on every task, offline ones included: this is the phase where the image is
+# built and the agent harness is installed.
 network_mode = "public"
-build_timeout_sec = 600
+build_timeout_sec = 900
 cpus = 2
-memory_mb = 8192
+memory_mb = 4096
 storage_mb = 10240
