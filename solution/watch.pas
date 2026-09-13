@@ -177,16 +177,30 @@ begin
 end;
 
 { A merged depot's row carries its hours and, up to the merge, its incidents; from the merge
-  they are under the survivor's id. Fold each such row into its survivor and drop it. }
+  they are under the survivor's id. A merged depot can itself have been merged on again, so
+  the survivor named on a row is not always the one still standing: follow merged_into to
+  the depot nobody else's row names in turn, and fold this row's own hours and incidents
+  there directly, not into whichever depot happens to sit between the two in the register.
+  Every row's figures are read once, from the row itself, and added to that end point once,
+  so it does not matter what order the rows come in or how many hops a chain runs. A
+  merged_into cycle would mean the register is broken (nobody is left standing to fold into),
+  so a row like that is left out of everyone's total rather than guessed at. }
 procedure FoldMerged;
 var
-  i, j, n: Integer;
+  i, j, n, hops: Integer;
 begin
   for i := 0 to High(depots) do
     if depots[i].mergedInto <> '' then
     begin
-      j := FindDepot(depots[i].mergedInto);
-      if j < 0 then Continue;
+      j := i;
+      hops := 0;
+      while (depots[j].mergedInto <> '') and (hops <= Length(depots)) do
+      begin
+        j := FindDepot(depots[j].mergedInto);
+        if j < 0 then Break;
+        Inc(hops);
+      end;
+      if (j < 0) or (j = i) or (depots[j].mergedInto <> '') then Continue;
       depots[j].hours := depots[j].hours + depots[i].hours;
       depots[j].severe := depots[j].severe + depots[i].severe;
       depots[j].logged := depots[j].logged + depots[i].logged;

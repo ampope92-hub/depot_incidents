@@ -46,7 +46,12 @@ the surviving depot's id for the absorbed site, in the `depot` column and the `s
 and the programme year will too, but payroll
 kept the old cost centre, so the merged depot's hours are still on its own row for every year,
 2025 included. The two rows are one depot: the hours on both rows and the incidents under both ids
-belong to the survivor, and the merged id itself isn't a depot any more.
+belong to the survivor, and the merged id itself isn't a depot any more. Each of our mergers is a
+straight pairing: a depot is either standing on its own, or it was folded once into a depot that
+is itself standing. Neither of ours was folded into a depot that had already been folded into a
+third, so there is no chain to walk, but a reader who wants a depot's true hours and incidents
+should still resolve `merged_into` all the way to whichever id is left standing, not stop at the
+first hop, in case a network ever does carry one.
 
 ## pilot_year.csv
 

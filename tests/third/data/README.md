@@ -45,7 +45,10 @@ D040 and D105 into D041. From the merge the log carries the surviving depot's id
 site, `depot` and `site` columns both, and the programme year does too, but payroll kept the old
 cost centres, so a merged depot's hours are still on its own row for every year, 2024 included.
 The two rows are one depot: the hours on both rows and the incidents under both ids belong to the
-survivor, and the merged id itself isn't a depot any more.
+survivor, and the merged id itself isn't a depot any more. Each of the six here is a straight
+pairing too: none of the absorbed depots is itself the survivor of another merger, so there is no
+chain to walk, but the right way to read `merged_into` is still to follow it to whichever id is
+left standing, not to stop at the first hop.
 
 ## pilot_year.csv
 

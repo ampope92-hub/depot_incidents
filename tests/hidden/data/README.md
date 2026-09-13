@@ -45,7 +45,9 @@ columns both, and the programme year does too, but payroll kept the old cost cen
 merged depot's hours are
 still on its own row for every year, 2023 included. The two rows are one depot: the hours on both
 rows and the incidents under both ids belong to the survivor, and the merged id itself isn't a
-depot any more.
+depot any more. Each merger here is a straight pairing too: none of the fifteen absorbed depots
+is itself the survivor of another merger, so there is no chain to walk, but the right way to read
+`merged_into` is still to follow it to whichever id is left standing, not to stop at the first hop.
 
 ## pilot_year.csv
 
