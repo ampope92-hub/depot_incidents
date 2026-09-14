@@ -26,16 +26,16 @@ HIDDEN_DATA = pathlib.Path("/opt/hidden/data")
 THIRD_DATA = pathlib.Path("/opt/third/data")
 
 SHIPPED_SHA = {
-    "incidents.csv": "0517b7d9571d9165783625a414a9c5b169a0633630b3b55865574eb0ed15a554",
-    "insurer_claims.csv": "108ff847e33fc27f57704fc9f94e0b75af10f3fecbaee79c20529af8a71495fc",
-    "depots.csv": "5e61350e742ce436a818389c0e842e04b9ab7a70820fb6b6467954a46475f1c5",
-    "policy.json": "880b6a2e8d44c0ebbc4d2120548eb1e7251841be8bde5682965c159dd5bcf6c7",
+    "incidents.csv": "6c23c5877fdbb16d4d27de2f5ef58eed37f6d896d37479fea6c3eb1c02a993f8",
+    "insurer_claims.csv": "56ac324f9db0d3a4b05369a0874f232ccd755b0d781e62b4363a55e308148ca7",
+    "depots.csv": "eefb81f27572489e609608dc3f249de251a81d019f85352a8dfa11eba7ce0f2d",
+    "policy.json": "3dffa501ed0779f6c616ab435c7f7a140e961f215f712e959cf1a783918c71e4",
     "pilot_year.csv": "066fb5a26d0fb2b1bd3151b84d9731b8cc206f762d2ccc33105f0c71cd9f951d",
     # README.md is hashed too: it is readable and its execute bit alone is stripped, and
     # dlopen()/mmap(PROT_EXEC) need only the read bit, so an unhashed README could carry a
     # dynamically loaded payload without tripping any other check. Pinning it closes that off
     # the same way the other five files are closed: any change to it fails this test.
-    "README.md": "2600958073eb7cbfe90c54655798e7b3ab1a94b4177810e17fd264e01c53e08a",
+    "README.md": "b9fc81a68068ff97f072a5602ef3643ecde9c088b185c915324465364677c612",
 }
 
 RUNS = [
@@ -86,10 +86,25 @@ def _programme_hours(data_dir):
     with open(data_dir / "depots.csv", newline="") as fh:
         rows = list(csv.DictReader(fh))
     worked = lambda row: int(row[f"labour_hours_{year}"]) + int(row[f"agency_hours_{year}"])
+    merged = {row["depot"]: row["merged_into"] for row in rows}
+
+    def survivor(d):
+        """The depot left standing at the end of d's chain of mergers. A yard folded into a yard
+        that was itself folded on is carried all the way to the end of the chain, which is what the
+        README tells the candidate to do; a register that pointed a chain back at itself would name
+        no survivor at all, and that row is left out rather than guessed at."""
+        seen = set()
+        while merged.get(d) and d not in seen:
+            seen.add(d)
+            d = merged[d]
+        return None if merged.get(d) else d
+
     hours = {row["depot"]: worked(row) for row in rows if not row["merged_into"]}
     for row in rows:
         if row["merged_into"]:
-            hours[row["merged_into"]] += worked(row)
+            end = survivor(row["depot"])
+            if end is not None:
+                hours[end] += worked(row)
     return hours
 
 

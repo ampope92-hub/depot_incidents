@@ -14,9 +14,9 @@ the depot. Severe incidents are entered by the regional safety lead, who is call
 own depot's, and the regional lead files a severe incident under the person's cost centre,
 because that is the cost centre the insurer's claim is opened against. `site` is the depot where
 it happened. On most rows the two are the same. They differ when somebody is hurt away from their
-own depot, and that is mostly trunk drivers: four of our depots are hubs, D136, D148, D031 and
+own depot, and that is mostly trunk drivers: four of our depots are hubs, D136, D148, D030 and
 D110, and through the night a hub's yard is largely drivers from the depot that runs the trunk
-routes into it, D067, D115, D138 and D047 in turn, so between a third and a half of what is
+routes into it, D022, D078, D059 and D068 in turn, so between a third and a half of what is
 logged at a hub went into the trunking depot's book. Any depot sees the odd visitor from
 elsewhere in its region. The handsets the programme year runs on belong to the site, so from
 January an incident is logged at the depot where it happened.
@@ -40,18 +40,19 @@ programme year, where both are budgeted. The hours a depot works are the two add
 a rate per hour is per hour worked whoever pays the wages. Most of our depots run a quarter or less
 of their hours on agency staff, four run a third or more.
 
-`merged_into` is blank except on a depot that was folded into another depot during the log. Two of
-ours were, D071 into D040 and D135 into D034, both in January 2021. From the merge the log carries
-the surviving depot's id for the absorbed site, in the `depot` column and the `site` column both,
-and the programme year will too, but payroll
-kept the old cost centre, so the merged depot's hours are still on its own row for every year,
-2025 included. The two rows are one depot: the hours on both rows and the incidents under both ids
-belong to the survivor, and the merged id itself isn't a depot any more. Each of our mergers is a
-straight pairing: a depot is either standing on its own, or it was folded once into a depot that
-is itself standing. Neither of ours was folded into a depot that had already been folded into a
-third, so there is no chain to walk, but a reader who wants a depot's true hours and incidents
-should still resolve `merged_into` all the way to whichever id is left standing, not stop at the
-first hop, in case a network ever does carry one.
+`merged_into` is blank except on a depot that was folded into another depot during the log. Three
+of ours were folded straight into a depot that stands on its own, D067 into D033, D084 into D044
+and D152 into D039, all in January 2021. The rest of them are the old cluster: eleven yards we
+closed into one another in the same reorganisation, each one folded into the next one along, the
+work ending up at D108. Every one of those rows names the yard it went to, and that yard's row
+names the next one, down to the one left standing. From the merge the log carries the surviving
+depot's id for the absorbed site, in the `depot` column and the `site` column both, and the
+programme year will too, but payroll kept every old cost centre, so a merged depot's hours are
+still on its own row for every year, 2025 included. The rows of a cluster are one depot: the hours
+on all of them and the incidents under all of those ids belong to the yard left standing at the
+end, not to whichever yard sits between it and the row in the register, and a merged id itself
+isn't a depot any more. So a reader who wants a depot's true hours and incidents has to follow
+`merged_into` all the way to the id that is left standing, not stop at the first hop.
 
 ## pilot_year.csv
 

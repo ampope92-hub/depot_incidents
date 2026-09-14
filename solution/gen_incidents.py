@@ -55,14 +55,15 @@ def main():
         network, n_depots, years = "Northern parcel network", 150, 5
         severe_share, rate_mu, rate_sigma = 0.12, math.log(3.2), 0.45
         rep_a, rep_b = 0.7, 1.0            # minor-incident logging rate, Beta(a, b)
-        list_size, rate_bar = 20, 1.60
+        list_size, rate_bar = 20, 1.65
         regions = ["Scotland", "North East", "North West", "Yorkshire"]
         first_year = 2018
         n_pilot_default = 60
         # depots that run mostly on agency labour, and the share of their hours that is agency
         n_agency_heavy, heavy_share = 30, (0.55, 0.80)
-        # depots folded into another depot in the second year of the log
-        n_merged = 15
+        # yards folded into another yard in the second year of the log: how many straight
+        # pairings, and how many rows the one consolidated cluster runs through
+        n_merged, chain_len = 12, 9
         # hubs: how many, the share of what happens in a hub's yard that happens to the trunk
         # drivers from its trunking depot, the share of visitors at an ordinary depot, and how
         # steeply hub status follows the depot's underlying rate (the hubs are the busy yards)
@@ -76,7 +77,7 @@ def main():
         first_year = 2019
         n_pilot_default = 50
         n_agency_heavy, heavy_share = 12, (0.40, 0.65)
-        n_merged = 6
+        n_merged, chain_len = 5, 8
         n_hubs, hub_visitor, other_visitor, hub_power = 9, (0.50, 0.70), (0.0, 0.05), 2.5
     else:
         network, n_depots, years = "Southern parcel network", 180, 5
@@ -87,7 +88,7 @@ def main():
         first_year = 2020
         n_pilot_default = 60
         n_agency_heavy, heavy_share = 4, (0.30, 0.45)
-        n_merged = 2
+        n_merged, chain_len = 3, 12
         n_hubs, hub_visitor, other_visitor, hub_power = 4, (0.35, 0.50), (0.0, 0.04), 2.0
     last_year = first_year + years - 1
     next_year = last_year + 1
@@ -148,9 +149,41 @@ def main():
     # pilot_year.csv is untouched. Own stream, so nothing above moves with it.
     merge_rng = random.Random(a.seed + 7305)
     merge_year = first_year + 1
-    free = [d[0] for d in depots if d[0] not in pilot_set]
+    # One consolidation ran through a whole cluster of yards rather than a single pairing. The
+    # network closed the old yards one at a time over two years, each one folded into the next one
+    # along, so the register carries a run of rows whose merged_into names a depot that is itself
+    # merged, ending at the one yard left standing. Payroll kept a cost centre for every one of
+    # them, so every one of those rows carries hours for every year. The cluster is big quiet
+    # yards, which is why it was worth consolidating: plenty of hours and not much happening on
+    # them. A reader that follows merged_into a single hop leaves most of the cluster's hours and
+    # incidents on rows that are not depots any more, so the yard left standing comes out far
+    # smaller and busier than it really is.
+    hours_of = {d: sum(h.values()) for d, _, h, _, _ in depots}
+    # The yard left standing is a busy one, which is why the work went there; the yards folded into
+    # it are the big quiet ones the network was paying for and barely using. Folded together they
+    # are a large, quiet depot, so the survivor's own rate is not the cluster's rate.
+    cut_lam = sorted((x[3] for x in depots), reverse=True)[list_size]
+    busy = [d for d, _, _, lam, _ in depots if d not in pilot_set and lam > cut_lam * 1.05]
+    last = max(busy, key=lambda d: hours_of[d])
+    quiet_big = sorted((d for d, _, _, lam, _ in depots
+                        if d not in pilot_set and lam < cut_lam * 0.5 and d != last),
+                       key=lambda d: -hours_of[d])
+    chain = quiet_big[:chain_len - 1] + [last]
+    merged_into = {chain[i]: chain[i + 1] for i in range(len(chain) - 1)}
+    # The ordinary pairings fill in around the cluster: a yard folded once into a yard that is
+    # standing on its own. Neither side of one of these is in the cluster, and no pilot depot is
+    # in either, so pilot_year.csv is untouched.
+    free = [d[0] for d in depots if d[0] not in pilot_set and d[0] not in set(chain)]
     picked = merge_rng.sample(free, 2 * n_merged)
-    merged_into = {picked[2 * i]: picked[2 * i + 1] for i in range(n_merged)}
+    merged_into.update({picked[2 * i]: picked[2 * i + 1] for i in range(n_merged)})
+
+    def survivor(d):
+        """The depot left standing at the end of d's chain of mergers."""
+        seen = set()
+        while merged_into.get(d) and d not in seen:
+            seen.add(d)
+            d = merged_into[d]
+        return d
     # Where an incident happens and whose books the injured person is on are two different
     # depots when the person is visiting. The hubs are where the trunking is: through the night
     # a hub's yard is mostly trunk drivers from its trunking depot, the depot in the region that
@@ -198,11 +231,11 @@ def main():
     claims = [(c, h, o, r) for (c, d, o, r), (_, h, _, _, _) in zip(claims, severe_rows)]
 
     def fold(d, r):
-        return merged_into.get(d, d) if r.year >= merge_year else d
+        return survivor(d) if r.year >= merge_year else d
     incidents = [(i, fold(h, r), fold(d, r), r, s) for i, h, d, r, s in incidents]
     claims = [(c, fold(d, r), o, r) for c, d, o, r in claims]
-    for old, new in merged_into.items():
-        key_counts[new] += key_counts.pop(old)
+    for old in list(merged_into):
+        key_counts[survivor(old)] += key_counts.pop(old)
 
     out = pathlib.Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -242,11 +275,11 @@ def main():
     # the memo's league table: logged incidents per 10k hours worked over the log years
     logged = {}
     for r in incidents:
-        d = merged_into.get(r[1], r[1])
+        d = survivor(r[1])
         logged[d] = logged.get(d, 0) + 1
     log_hours = {d: sum(h[y] for y in range(first_year, last_year + 1)) for d, _, h, _, _ in depots}
-    for old, new in merged_into.items():
-        log_hours[new] += log_hours.pop(old)
+    for old in list(merged_into):
+        log_hours[survivor(old)] += log_hours.pop(old)
     rate = {d: 10000 * logged.get(d, 0) / log_hours[d] for d in log_hours}
     top = sorted(rate, key=lambda d: -rate[d])[:list_size]
     policy = {

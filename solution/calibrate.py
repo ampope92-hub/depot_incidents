@@ -66,7 +66,17 @@ def routes(d, key):
     hours, payroll, nh, logged, severe, home, claims, lam_h = ({k: v[k] for k in kept} for v in
         (row_hours, row_payroll, row_next, row_logged, row_severe, row_home, row_claims,
          {k: key["truth"][k]["rate_per_10k_hours"] * row_hours[k] for k in rows}))
-    for a, b in into.items():
+    def survivor(x):
+        """The depot left standing at the end of x's chain of mergers: a yard folded into a yard
+        that was itself folded on belongs to the end of the chain, not to the row in between."""
+        seen = set()
+        while into.get(x) and x not in seen:
+            seen.add(x)
+            x = into[x]
+        return x
+
+    for a in into:
+        b = survivor(a)
         hours[b] += row_hours[a]
         payroll[b] += row_payroll[a]
         nh[b] += row_next[a]
@@ -130,7 +140,7 @@ def main():
     a = ap.parse_args()
     fmt = lambda v: f"{st.mean(v):6.3f} [{min(v):6.3f},{max(v):6.3f}]"
     for label, extra in [("Southern network, 30 places, bar 1.65", []),
-                         ("Northern network, 20 places, bar 1.60", ["--hidden"]),
+                         ("Northern network, 20 places, bar 1.65", ["--hidden"]),
                          ("Western network, 25 places, bar 1.62", ["--third"])]:
         # the pinned export first: the one that ships, or the one the verifier holds
         with tempfile.TemporaryDirectory() as tmp:

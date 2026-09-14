@@ -14,10 +14,10 @@ depot. Severe incidents are entered by the regional safety lead, who is called f
 entry goes in, and a severe incident is filed by the lead under the person's cost centre, which
 is what the insurer's claim gets opened against. `site` is where it happened. The two agree on
 most rows and part company when somebody is hurt away from their own depot, mostly trunk
-drivers: nine of the depots are hubs, D031, D115, D128, D065, D052, D058, D096, D019 and D023,
+drivers: nine of the depots are hubs, D031, D109, D128, D065, D054, D057, D105, D019 and D022,
 and at each of them the yard through the night is mostly drivers from the one depot that runs
-its trunk routes, D107, D079, D124, D046, D091, D130, D027, D046 and D092 in turn, so between
-half and two thirds of what is logged at a hub went into that trunking depot's book. An ordinary
+its trunk routes, D023, D063, D007, D083, D023, D074, D038, D046 and D098 in turn, so between
+half and seven tenths of what is logged at a hub went into that trunking depot's book. An ordinary
 depot gets the odd visitor from its own region. The handsets belong to the site, so from January
 an incident is logged at the depot where it happened.
 
@@ -38,17 +38,21 @@ programme year, where both are budgeted. The hours a depot works are the two add
 a rate per hour is per hour worked whoever pays the wages. Twelve depots run two fifths or more
 of their hours on agency staff, up to around two thirds; the rest a fifth or less.
 
-`merged_into` is blank except on a depot that was folded into another depot during the log. Six
-Western depots were, all in January 2020, when two of the region's smaller operators were folded
-into their neighbours: D009 into D067, D028 into D078, D037 into D083, D055 into D034, D090 into
-D040 and D105 into D041. From the merge the log carries the surviving depot's id for the absorbed
+`merged_into` is blank except on a depot that was folded into another depot during the log.
+Twelve Western depots were, all in January 2020, when two of the region's smaller operators were
+folded into their neighbours. Five of them went straight into a depot that stands on its own: D033
+into D084, D040 into D090, D058 into D020, D107 into D046 and D118 into D050. The other seven are
+the old cluster, yards closed into one another in the same reorganisation, each folded into the
+next one along, the work ending up at D023, so every one of those rows names the yard it went to
+and that yard's row names the next one, down to the one left standing.
+From the merge the log carries the surviving depot's id for the absorbed
 site, `depot` and `site` columns both, and the programme year does too, but payroll kept the old
 cost centres, so a merged depot's hours are still on its own row for every year, 2024 included.
-The two rows are one depot: the hours on both rows and the incidents under both ids belong to the
-survivor, and the merged id itself isn't a depot any more. Each of the six here is a straight
-pairing too: none of the absorbed depots is itself the survivor of another merger, so there is no
-chain to walk, but the right way to read `merged_into` is still to follow it to whichever id is
-left standing, not to stop at the first hop.
+The rows of a cluster are one depot: the hours on all of them and the incidents under all of those
+ids belong to the yard left standing at the end, not to whichever yard sits between it and the row
+in the register, and a merged id itself isn't a depot any more. So the right way to read
+`merged_into` is to follow it all the way to whichever id is left standing, not to stop at the
+first hop.
 
 ## pilot_year.csv
 

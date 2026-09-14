@@ -38,16 +38,20 @@ a rate per hour is per hour worked whoever pays the wages. The big Northern hubs
 labour: thirty depots take more than half their hours from the agencies, the rest a quarter or
 less.
 
-`merged_into` is blank except on a depot that was folded into another depot during the log. Fifteen
+`merged_into` is blank except on a depot that was folded into another depot during the log. Twenty
 Northern depots were, all in January 2019, when the network took over the old regional carriers.
+Twelve of them went straight into a depot that stands on its own. The other eight are the old
+cluster: yards we closed into one another in the same reorganisation, each folded into the next one
+along, the work ending up at D077, so every one of those rows names the yard it went to and that
+yard's row names the next one, down to the one left standing.
 From the merge the log carries the surviving depot's id for the absorbed site, `depot` and `site`
 columns both, and the programme year does too, but payroll kept the old cost centres, so a
 merged depot's hours are
-still on its own row for every year, 2023 included. The two rows are one depot: the hours on both
-rows and the incidents under both ids belong to the survivor, and the merged id itself isn't a
-depot any more. Each merger here is a straight pairing too: none of the fifteen absorbed depots
-is itself the survivor of another merger, so there is no chain to walk, but the right way to read
-`merged_into` is still to follow it to whichever id is left standing, not to stop at the first hop.
+still on its own row for every year, 2023 included. The rows of a cluster are one depot: the hours
+on all of them and the incidents under all of those ids belong to the yard left standing at the
+end, not to whichever yard sits between it and the row in the register, and a merged id itself
+isn't a depot any more. So the right way to read `merged_into` is to follow it all the way to
+whichever id is left standing, not to stop at the first hop.
 
 ## pilot_year.csv
 
