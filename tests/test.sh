@@ -66,6 +66,16 @@ rm -rf /app/watch
 cp -a /opt/watch_pristine /app/watch
 rm -f /app/watch/watch
 rm -rf /app/watch/obj && mkdir -p /app/watch/obj
+# The whole job has to sit in the Pascal: fpc compiles whatever is under src/, and an
+# {$link some.o} directive in the submitted source will pull in any object file that
+# happens to be sitting next to it. Rather than scan the source for a link directive,
+# the object is simply not there to link: everything under src/ that is not Pascal
+# source is removed before fpc ever runs, so a submitted helper.o (or a precompiled
+# .ppu/.o unit) is gone from disk and the directive fails to resolve at compile time.
+# This runs as root, before the tree is handed to the build user, so it cannot be
+# raced or skipped by anything the submission does.
+find /app/watch/src -mindepth 1 -type f ! -iname '*.pas' -delete
+find /app/watch/src -mindepth 1 -type d -empty -delete
 chown -R runner:runner /app/watch /app/out
 setsid \
   setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
