@@ -30,6 +30,20 @@ if as_runner bash -c 'test -r /tests/test_outputs.py || ls /opt/golden || ls /op
 fi
 echo "verifier files closed to the unprivileged build user"
 
+# /app/data and /app/out are declared artifacts exactly like src/, so anything either one
+# holds at build time is just as reachable from an fpc {$link} directive naming an absolute
+# path as a file sitting under src/ would be. Both are pruned to what a run actually needs
+# now, before the pristine copy is taken and well before fpc runs, instead of only after the
+# build as before. /app/data keeps just the six shipped names (instruction.md: "Leave the six
+# files in /app/data as they are"); anything else at its top level, directories included, goes,
+# and what remains loses its execute bits. /app/out is emptied outright: nothing legitimate
+# needs to be there before the binary that will write into it has even been built.
+find /app/data -mindepth 1 -maxdepth 1 \
+  ! -name depots.csv ! -name incidents.csv ! -name insurer_claims.csv \
+  ! -name pilot_year.csv ! -name policy.json ! -name README.md -exec rm -rf {} +
+find /app/data -type f -exec chmod a-x {} +
+rm -rf /app/out && mkdir -p /app/out
+
 # The shipped export is checked back against its hashes by pytest, so it stays where it landed,
 # read-only. A root-owned pristine copy of the agent's project is kept so each build starts from
 # exactly what was collected; cp -a keeps the agent's file modes, so write bits are stripped.
@@ -69,12 +83,15 @@ rm -rf /app/watch/obj && mkdir -p /app/watch/obj
 # The whole job has to sit in the Pascal: fpc compiles whatever is under src/, and an
 # {$link some.o} directive in the submitted source will pull in any object file that
 # happens to be sitting next to it. Rather than scan the source for a link directive,
-# the object is simply not there to link: everything under src/ that is not Pascal
-# source is removed before fpc ever runs, so a submitted helper.o (or a precompiled
+# the object is simply not there to link: everything under src/ that is not a .pas or
+# .inc file is removed before fpc ever runs, so a submitted helper.o (or a precompiled
 # .ppu/.o unit) is gone from disk and the directive fails to resolve at compile time.
-# This runs as root, before the tree is handed to the build user, so it cannot be
-# raced or skipped by anything the submission does.
-find /app/watch/src -mindepth 1 -type f ! -iname '*.pas' -delete
+# .inc survives because {$I tables.inc} is ordinary Free Pascal, not a link target: an
+# include is textually pasted into the source fpc is already compiling, it cannot smuggle
+# in machine code the compiler did not itself produce from Pascal source. This runs as
+# root, before the tree is handed to the build user, so it cannot be raced or skipped by
+# anything the submission does. instruction.md states the restriction in one sentence.
+find /app/watch/src -mindepth 1 -type f ! -iname '*.pas' ! -iname '*.inc' -delete
 find /app/watch/src -mindepth 1 -type d -empty -delete
 chown -R runner:runner /app/watch /app/out
 setsid \
@@ -101,19 +118,11 @@ find /app/watch -type d -exec chmod 755 {} +
 find /app/watch -type f -exec chmod 600 {} +
 [ -f /app/watch/watch ] && chmod 755 /app/watch/watch
 
-# /app/data and /app/out are declared artifacts, so the agent can leave files in both. The export
-# is six files and all six are hashed by test_outputs.py, README.md included, so an unhashed and
-# still-readable file cannot be used to smuggle anything into a run; anything else the agent
-# parked there is not part of the export and goes before any graded run. That means anything at
-# all that is not one of the six names at the top level, directories included, so a copy of an
-# interpreter filed under an allowed name inside a subdirectory does not survive. What does
-# survive loses its execute bits, since the tool closure below only reaches the system paths;
-# read access to the six shipped files stays open because the binary has to read them, which is
-# why they are hashed rather than just closed.
-find /app/data -mindepth 1 -maxdepth 1 \
-  ! -name depots.csv ! -name incidents.csv ! -name insurer_claims.csv \
-  ! -name pilot_year.csv ! -name policy.json ! -name README.md -exec rm -rf {} +
-find /app/data -type f -exec chmod a-x {} +
+# /app/data was already pruned to the six shipped names and had its execute bits stripped
+# above, before the build; it has been read-only (chmod a-w) since, and the build user has no
+# privilege to undo that, so nothing new can have appeared there since. All six are hashed by
+# test_outputs.py, README.md included, so an unhashed and still-readable file cannot be used to
+# smuggle anything into a run either.
 
 # run_once <data-dir> <output-path> <capture-path>: run the built binary on an export, as the
 # build user, with every tool closed, from /app/watch, and move what it wrote to a root-only
