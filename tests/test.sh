@@ -60,9 +60,11 @@ chmod -R go-rwx /opt/watch_pristine
 # python or awk the binary shells out to, and reopened straight after. Root is unaffected.
 TOOLS="$( { find /usr/local/bin /usr/local/sbin /usr/bin /bin /usr/sbin /sbin -xdev -type f -perm /111 2>/dev/null;
              for l in $(find /usr/local/bin /usr/bin /bin -xdev -type l 2>/dev/null); do t="$(readlink -f "$l")"; [ -f "$t" ] && echo "$t"; done; } \
-  | sort -u | grep -v -E 'ld-linux|/ld\.so$' | grep -v -x -F -e "$(readlink -f /usr/bin/env)")"
+  | sort -u | grep -v -E 'ld-linux|/ld\.so$' | grep -v -x -F -e "$(readlink -f /usr/bin/env)" -e /usr/local/bin/watch_launch)"
 # /usr/bin/env is what setpriv starts each run through, so it stays open; it is not a route to
-# anything, since whatever it executes is checked on its own. Only regular files are listed: the
+# anything, since whatever it executes is checked on its own. watch_launch stays open for the same
+# reason: it is the wrapper that starts the binary under the seccomp filter, and it runs nothing but
+# the one binary it is handed. Only regular files are listed: the
 # merged /bin is itself a symlink to /usr/bin, and closing that directory would shut the whole
 # tree, launcher included. The dynamic loader is left out as
 # well: /usr/bin/ld.so links to it, and closing it would stop every dynamically linked program,
@@ -173,7 +175,11 @@ find /app/watch -type f -exec chmod 600 {} +
 # temp directories are all closed to it here, and each run's output is a single root-owned file
 # it can only truncate and rewrite (below), inside a root-owned directory it cannot drop a
 # sibling into. The one writable thing in the whole tree is that output file, and it never
-# carries an execute bit and cannot be chmod'd by a user that does not own it.
+# carries an execute bit and cannot be chmod'd by a user that does not own it. The remaining way
+# to run native code without a file at all -- an anonymous in-memory executable from
+# memfd_create run with fexecve -- is closed by the seccomp filter watch_launch installs around
+# each run (below), which denies those calls, so there is no path, named or anonymous, to native
+# code outside the compiled Pascal.
 chown root:root /app && chmod 755 /app
 rm -rf /app/out && mkdir -p /app/out && chown root:root /app/out && chmod 755 /app/out
 chown -R root:root /home/runner && chmod -R go-w /home/runner
@@ -203,9 +209,14 @@ run_once() {
   rm -rf /app/out && mkdir -p /app/out && chown root:root /app/out && chmod 755 /app/out
   : > "$outfile" && chown root:root "$outfile" && chmod 0622 "$outfile"
   close_tools
+  # The binary is started through watch_launch, which installs a seccomp filter and then execs it.
+  # The filter denies memfd_create and execveat, so the binary cannot open an anonymous, path-less
+  # file, write native code into it and run it (fexecve); with no writable directory either, there
+  # is nowhere at all for a dropped-in native helper to come from, so the whole job has to be done
+  # by the compiled Pascal itself. Ordinary file work is unaffected.
   setsid \
     setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
-    env -C /app/watch HOME=/home/runner /app/watch/watch "$data" "$outfile" &
+    env -C /app/watch HOME=/home/runner /usr/local/bin/watch_launch /app/watch/watch "$data" "$outfile" &
   pid=$!
   wait "$pid"
   echo "run exit status: $? ($data)"
