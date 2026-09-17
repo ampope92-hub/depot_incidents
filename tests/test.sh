@@ -80,19 +80,18 @@ rm -rf /app/watch
 cp -a /opt/watch_pristine /app/watch
 rm -f /app/watch/watch
 rm -rf /app/watch/obj && mkdir -p /app/watch/obj
-# The whole job has to sit in the Pascal, so nothing but the agent's Pascal may reach the
-# linker. Two things prevent it. First, everything under src/ that is not a .pas or .inc file
-# is removed as root before fpc runs, so a submitted helper.o (or a precompiled .ppu/.o unit)
-# is gone from disk; .inc survives because {$I tables.inc} is ordinary Free Pascal, textually
-# pasted into the source fpc is already compiling, so it carries no linkable machine code.
-# build.sh is a declared artifact collected into /app/watch for the agent's own use; the
-# verifier compiles src/watch.pas itself and never sources it, so it is removed too rather than
-# left where an {$L /app/watch/build.sh} directive could hand it to the linker. This runs as
-# root, before the tree is handed to the build user, so it cannot be raced or skipped.
-find /app/watch/src -mindepth 1 -type f ! -iname '*.pas' ! -iname '*.inc' -delete
-find /app/watch/src -mindepth 1 -type d -empty -delete
+# The whole job has to sit in the Pascal, and everything under src/ comes along to the build,
+# whatever its name or extension: a Pascal unit is not always a .pas, an include is not always
+# an .inc, and stripping by extension deleted contract-legal source before fpc ever ran. So
+# nothing under src/ is removed on account of its name; the one thing that must not happen, a
+# non-Pascal file reaching the linker, is stopped by the link-input check below instead, which
+# reads what fpc actually resolved rather than guessing from a filename. build.sh is a declared
+# artifact collected into /app/watch for the agent's own use; the verifier compiles src/watch.pas
+# itself and never sources it, so it is removed rather than left where an {$L /app/watch/build.sh}
+# directive could hand it to the linker. This runs as root, before the tree is handed to the
+# build user, so it cannot be raced or skipped.
 rm -f /app/watch/build.sh
-chown -R runner:runner /app/watch /app/out
+chown -R runner:runner /app/watch
 # Second, and the real backstop: fpc is run with -Cn, which compiles the Pascal to objects and
 # writes the link script it would hand to ld, but stops before the link. A correct project links
 # only fpc's own compiled objects under obj/ and the Free Pascal run-time units under the fpc
@@ -169,17 +168,40 @@ find /app/watch -type f -exec chmod 600 {} +
 # test_outputs.py, README.md included, so an unhashed and still-readable file cannot be used to
 # smuggle anything into a run either.
 
+# The build user gets no writable directory for the runs, so a verifier-aware program cannot
+# write a native helper somewhere and execute it. /app, the runner's home and the world-writable
+# temp directories are all closed to it here, and each run's output is a single root-owned file
+# it can only truncate and rewrite (below), inside a root-owned directory it cannot drop a
+# sibling into. The one writable thing in the whole tree is that output file, and it never
+# carries an execute bit and cannot be chmod'd by a user that does not own it.
+chown root:root /app && chmod 755 /app
+rm -rf /app/out && mkdir -p /app/out && chown root:root /app/out && chmod 755 /app/out
+chown -R root:root /home/runner && chmod -R go-w /home/runner
+chmod 0755 /tmp /var/tmp /dev/shm
+for d in /app /app/out /tmp /var/tmp /dev/shm /home/runner; do
+  if as_runner test -w "$d" 2>/dev/null; then
+    echo "FATAL: $d is writable by the unprivileged build user; a native helper could be dropped"
+    echo "and executed there, so the whole-job-in-Pascal premise cannot be graded on this run."
+    echo 0 > /logs/verifier/reward.txt
+    exit 0
+  fi
+done
+echo "no directory is writable by the unprivileged build user"
+
 # run_once <data-dir> <output-path> <capture-path>: run the built binary on an export, as the
 # build user, with every tool closed, from /app/watch, and move what it wrote to a root-only
 # path. Each run is given its own output path, so a program that writes a fixed destination
-# rather than the one it is handed fails the second run. Only a regular file is ever staged:
-# the binary cannot read the keys, but it can drop a symlink at the output path pointing into
-# /opt, and pytest, running as root, would then read the verifier's own truth back as the
-# agent's figures. Before each run every file under the project except the binary just built
-# loses its execute bits, so a helper shipped beside the sources cannot be run from the Pascal.
+# rather than the one it is handed fails the second run. The output path is pre-created by root
+# as an empty, never-executable, write-only (0622) file the build user can open and truncate but
+# not read back, chmod, rename or replace: a regular file is the only thing that can end up there, so the binary cannot drop
+# a symlink pointing into /opt and have pytest read the verifier's own truth back as the agent's
+# figures, and it has nowhere to drop and run a native helper. Before each run every file under
+# the project except the binary just built has already lost its execute bits, so a helper shipped
+# beside the sources cannot be run from the Pascal.
 run_once() {
   local data="$1" outfile="$2" out="$3" pid
-  rm -rf /app/out && mkdir -p /app/out && chown runner:runner /app/out
+  rm -rf /app/out && mkdir -p /app/out && chown root:root /app/out && chmod 755 /app/out
+  : > "$outfile" && chown root:root "$outfile" && chmod 0622 "$outfile"
   close_tools
   setsid \
     setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
