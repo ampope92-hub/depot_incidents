@@ -80,33 +80,78 @@ rm -rf /app/watch
 cp -a /opt/watch_pristine /app/watch
 rm -f /app/watch/watch
 rm -rf /app/watch/obj && mkdir -p /app/watch/obj
-# The whole job has to sit in the Pascal: fpc compiles whatever is under src/, and an
-# {$link some.o} directive in the submitted source will pull in any object file that
-# happens to be sitting next to it. Rather than scan the source for a link directive,
-# the object is simply not there to link: everything under src/ that is not a .pas or
-# .inc file is removed before fpc ever runs, so a submitted helper.o (or a precompiled
-# .ppu/.o unit) is gone from disk and the directive fails to resolve at compile time.
-# .inc survives because {$I tables.inc} is ordinary Free Pascal, not a link target: an
-# include is textually pasted into the source fpc is already compiling, it cannot smuggle
-# in machine code the compiler did not itself produce from Pascal source. This runs as
-# root, before the tree is handed to the build user, so it cannot be raced or skipped by
-# anything the submission does. instruction.md states the restriction in one sentence.
+# The whole job has to sit in the Pascal, so nothing but the agent's Pascal may reach the
+# linker. Two things prevent it. First, everything under src/ that is not a .pas or .inc file
+# is removed as root before fpc runs, so a submitted helper.o (or a precompiled .ppu/.o unit)
+# is gone from disk; .inc survives because {$I tables.inc} is ordinary Free Pascal, textually
+# pasted into the source fpc is already compiling, so it carries no linkable machine code.
+# build.sh is a declared artifact collected into /app/watch for the agent's own use; the
+# verifier compiles src/watch.pas itself and never sources it, so it is removed too rather than
+# left where an {$L /app/watch/build.sh} directive could hand it to the linker. This runs as
+# root, before the tree is handed to the build user, so it cannot be raced or skipped.
 find /app/watch/src -mindepth 1 -type f ! -iname '*.pas' ! -iname '*.inc' -delete
 find /app/watch/src -mindepth 1 -type d -empty -delete
+rm -f /app/watch/build.sh
 chown -R runner:runner /app/watch /app/out
+# Second, and the real backstop: fpc is run with -Cn, which compiles the Pascal to objects and
+# writes the link script it would hand to ld, but stops before the link. A correct project links
+# only fpc's own compiled objects under obj/ and the Free Pascal run-time units under the fpc
+# directory. An {$L}, {$linklib} or {$librarypath} directive naming anything else -- an object,
+# a text linker script, a library, whatever its name, extension or content -- shows up in that
+# link script as an extra INPUT entry, and the link is refused. This checks the link inputs fpc
+# actually resolved, not the Pascal source, so it needs no scan for a directive and a renamed or
+# text-format payload has no way past it.
 setsid \
   setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
-  bash -c 'cd /app/watch && fpc -O2 -Mobjfpc -Sh -FEobj -FUobj -Fu/app/watch/src -Fi/app/watch/src -o/app/watch/watch src/watch.pas' &
+  bash -c 'cd /app/watch && fpc -Cn -O2 -Mobjfpc -Sh -FEobj -FUobj -Fu/app/watch/src -Fi/app/watch/src -o/app/watch/watch src/watch.pas' &
 bpid=$!
 wait "$bpid"
 bstatus=$?
-echo "build exit status: $bstatus"
+echo "compile exit status: $bstatus"
 # setsid makes the child a session leader, so its group id is its own pid and can be addressed
 # directly. Reading it out of /proc races setsid and has taken down the verifier on sibling tasks.
 kill -TERM -- -"$bpid" 2>/dev/null || true
 kill -KILL -- -"$bpid" 2>/dev/null || true
 as_runner bash -c 'kill -9 -1' 2>/dev/null || true
-[ "$bstatus" -eq 0 ] && [ -x /app/watch/watch ] || echo "the collected sources did not build into /app/watch/watch"
+
+# Read every INPUT() token out of fpc's generated link script(s) and reject the build if any one
+# is neither an object fpc just produced under obj/ nor a run-time unit under the fpc directory.
+link_ok=1
+[ "$bstatus" -eq 0 ] || link_ok=0
+if [ "$link_ok" -eq 1 ]; then
+  for res in /app/watch/link*.res; do
+    [ -f "$res" ] || continue
+    bad="$(awk '
+      { line = $0 }
+      infield == 0 && line ~ /INPUT[ \t]*\(/ { infield = 1; sub(/.*INPUT[ \t]*\(/, "", line) }
+      infield == 1 {
+        rest = line
+        if (rest ~ /\)/) { sub(/\).*/, "", rest); infield = 0 }
+        n = split(rest, a, /[ \t]+/)
+        for (i = 1; i <= n; i++) if (a[i] != "") print a[i]
+      }
+    ' "$res" | grep -vE '^/usr/lib/x86_64-linux-gnu/fpc/' | grep -vE '^obj/[A-Za-z0-9_]+\.o$' || true)"
+    if [ -n "$bad" ]; then
+      echo "the collected sources hand the linker a file that is not fpc's own Pascal object: $(echo "$bad" | tr '\n' ' ')"
+      link_ok=0
+    fi
+  done
+fi
+
+# Link only when the inputs checked out, as the build user, with fpc's own generated command.
+if [ "$link_ok" -eq 1 ]; then
+  setsid \
+    setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
+    bash -c 'cd /app/watch && sh ppas.sh' &
+  lpid=$!
+  wait "$lpid"
+  lstatus=$?
+  echo "link exit status: $lstatus"
+  kill -TERM -- -"$lpid" 2>/dev/null || true
+  kill -KILL -- -"$lpid" 2>/dev/null || true
+  as_runner bash -c 'kill -9 -1' 2>/dev/null || true
+fi
+[ "$link_ok" -eq 1 ] && [ -x /app/watch/watch ] || echo "the collected sources did not build into /app/watch/watch"
 
 # Everything the build produced now belongs to root. The build user keeps exactly one thing it can
 # run, the binary just built, and nothing it can read beside it, so a helper shipped in the project

@@ -19,4 +19,10 @@ COPY watch /app/watch
 COPY data /app/data
 RUN chmod +x /app/watch/build.sh && mkdir -p /app/watch/obj /app/out
 
+# The graded runs serve the export read-only to an unprivileged user, so a solution must open
+# its inputs for reading only. The agent works as root, where that constraint cannot be forced,
+# but the export ships with its write bits cleared so the read-only intent is visible in the
+# working tree; instruction.md states it plainly.
+RUN chmod a-w /app/data/*
+
 WORKDIR /app
