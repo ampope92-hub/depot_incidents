@@ -63,6 +63,14 @@ RUN chmod -R go-rwx /opt/hidden
 COPY third /opt/third
 RUN chmod -R go-rwx /opt/third
 
+# The shipped network's policy serialised the way another tool would write it: no indentation,
+# keys in another order, one key spelled with a JSON string escape. test.sh runs the binary a
+# fourth time on the shipped export with this policy in place of the shipped one, graded against
+# the shipped key, so a program that scans the policy text for a literal key name instead of
+# decoding the JSON fails there.
+COPY probe /opt/probe
+RUN chmod -R go-rwx /opt/probe
+
 COPY . /tests/
 
 WORKDIR /app

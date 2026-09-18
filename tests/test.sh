@@ -82,9 +82,10 @@ rm -rf /app/watch
 cp -a /opt/watch_pristine /app/watch
 rm -f /app/watch/watch
 rm -rf /app/watch/obj && mkdir -p /app/watch/obj
-# The whole job has to sit in the Pascal, and everything under src/ comes along to the build,
-# whatever its name or extension: a Pascal unit is not always a .pas, an include is not always
-# an .inc, and stripping by extension deleted contract-legal source before fpc ever ran. So
+# The binary is built from the Pascal under src/ and nothing else of the agent's, and everything
+# under src/ comes along to the build, whatever its name or extension: a Pascal unit is not
+# always a .pas, an include is not always an .inc, and stripping by extension deleted
+# contract-legal source before fpc ever ran. So
 # nothing under src/ is removed on account of its name; the one thing that must not happen, a
 # non-Pascal file reaching the linker, is stopped by the link-input check below instead, which
 # reads what fpc actually resolved rather than guessing from a filename. build.sh is a declared
@@ -187,7 +188,7 @@ chmod 0755 /tmp /var/tmp /dev/shm
 for d in /app /app/out /tmp /var/tmp /dev/shm /home/runner; do
   if as_runner test -w "$d" 2>/dev/null; then
     echo "FATAL: $d is writable by the unprivileged build user; a native helper could be dropped"
-    echo "and executed there, so the whole-job-in-Pascal premise cannot be graded on this run."
+    echo "and executed there, so the run cannot be graded as the binary built from the Pascal."
     echo 0 > /logs/verifier/reward.txt
     exit 0
   fi
@@ -217,8 +218,8 @@ run_once() {
   # The binary is started through watch_launch, which installs a seccomp filter and then execs it.
   # The filter denies memfd_create and execveat, so the binary cannot open an anonymous, path-less
   # file, write native code into it and run it (fexecve); with no writable directory either, there
-  # is nowhere at all for a dropped-in native helper to come from, so the whole job has to be done
-  # by the compiled Pascal itself. Ordinary file work is unaffected.
+  # is nowhere at all for a dropped-in native helper to come from: nothing else on the box runs
+  # while the binary does, which is what the instruction states. Ordinary file work is unaffected.
   setsid \
     setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
     env -C /app/watch HOME=/home/runner /usr/local/bin/watch_launch /app/watch/watch "$data" "$outfile" &
@@ -268,6 +269,25 @@ find "$staged3" -type f -exec chmod 444 {} +
 echo "=== the same binary on the third network's export ==="
 run_once "$staged3" /app/out/watch_third.json /opt/run_third.json
 rm -rf "$staged3"
+
+# A fourth run: the shipped export again, with its policy.json serialised the way another tool
+# would write it (no indentation, keys in another order, one key spelled with a JSON string
+# escape). It decodes to the same object, so the same list clears the same key; a program that
+# searched the policy text for a literal key name instead of decoding the JSON fails here and
+# nowhere else. The data directory pytest reads for this run is assembled root-only under /opt
+# from the shipped files, which the hash check covers, and the probe policy.
+mkdir -p /opt/probe_data
+cp /app/data/*.csv /app/data/README.md /opt/probe_data/
+cp /opt/probe/policy.json /opt/probe_data/policy.json
+chmod 700 /opt/probe_data && chmod 600 /opt/probe_data/*
+staged4="$(mktemp -d /app/export_XXXXXXXX)"
+cp /opt/probe_data/* "$staged4"/
+chown -R root:root "$staged4"
+chmod 755 "$staged4"
+find "$staged4" -type f -exec chmod 444 {} +
+echo "=== the same binary on the shipped export with its policy re-serialised ==="
+run_once "$staged4" /app/out/watch_probe.json /opt/run_probe.json
+rm -rf "$staged4"
 
 # Nothing the agent started may be alive while pytest runs or while the reward is written.
 as_runner bash -c 'kill -9 -1' 2>/dev/null || true

@@ -20,7 +20,7 @@
 program watch;
 {$mode objfpc}{$H+}
 uses
-  SysUtils, Classes;
+  SysUtils, Classes, fpjson, jsonparser;
 
 type
   TDepot = record
@@ -50,30 +50,33 @@ begin
   end;
 end;
 
-{ the policy is a small JSON object; the two things needed are pulled out by name }
-function JsonInt(const text, key: string; nth: Integer): Integer;
+{ the policy is JSON, so it is decoded as JSON rather than searched as text: spacing,
+  key order and string escapes are left to the parser, not to us }
+procedure ReadPolicy(const path: string; out places, firstYear, lastYear: Integer);
 var
-  p, q: Integer;
-  digits: string;
+  root: TJSONData;
+  o: TJSONObject;
+  years: TJSONArray;
 begin
-  p := Pos('"' + key + '"', text);
-  if p = 0 then
-  begin
-    writeln(StdErr, 'policy.json has no ', key);
-    Halt(1);
+  root := nil;
+  try
+    root := GetJSON(ReadWhole(path));
+    if not (root is TJSONObject) then raise Exception.Create('not a JSON object');
+    o := TJSONObject(root);
+    if o.Find('list_size', jtNumber) = nil then raise Exception.Create('no list_size');
+    places := o.Integers['list_size'];
+    years := o.Get('log_years', TJSONArray(nil));
+    if (years = nil) or (years.Count <> 2) then raise Exception.Create('log_years is not [first, last]');
+    firstYear := years.Integers[0];
+    lastYear := years.Integers[1];
+  except
+    on E: Exception do
+    begin
+      writeln(StdErr, 'policy.json: ', E.Message);
+      Halt(1);
+    end;
   end;
-  p := p + Length(key) + 2;
-  { skip to the nth run of digits after the key }
-  while nth > 0 do
-  begin
-    while (p <= Length(text)) and not (text[p] in ['0'..'9']) do Inc(p);
-    q := p;
-    while (q <= Length(text)) and (text[q] in ['0'..'9']) do Inc(q);
-    digits := Copy(text, p, q - p);
-    p := q;
-    Dec(nth);
-  end;
-  Result := StrToInt(digits);
+  root.Free;
 end;
 
 function FindDepot(const id: string): Integer;
@@ -281,7 +284,6 @@ begin
 end;
 
 var
-  policy: string;
   i: Integer;
 begin
   if ParamCount <> 2 then
@@ -293,10 +295,7 @@ begin
   outPath := ParamStr(2);
   DefaultFormatSettings.DecimalSeparator := '.';
 
-  policy := ReadWhole(dataDir + '/policy.json');
-  listSize := JsonInt(policy, 'list_size', 1);
-  yearFrom := JsonInt(policy, 'log_years', 1);
-  yearTo := JsonInt(policy, 'log_years', 2);
+  ReadPolicy(dataDir + '/policy.json', listSize, yearFrom, yearTo);
 
   LoadDepots;
   LoadIncidents;
