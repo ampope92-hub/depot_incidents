@@ -235,6 +235,34 @@ begin
   end;
 end;
 
+{ ids come out of the CSV, so quote them for JSON: escape the two structural
+  characters and the control range rather than trust the field to be clean }
+function JsonEscape(const s: string): string;
+var
+  i: Integer;
+  c: Char;
+begin
+  Result := '';
+  for i := 1 to Length(s) do
+  begin
+    c := s[i];
+    case c of
+      '"': Result := Result + '\"';
+      '\': Result := Result + '\\';
+      #8:  Result := Result + '\b';
+      #9:  Result := Result + '\t';
+      #10: Result := Result + '\n';
+      #12: Result := Result + '\f';
+      #13: Result := Result + '\r';
+    else
+      if c < #32 then
+        Result := Result + '\u' + LowerCase(IntToHex(Ord(c), 4))
+      else
+        Result := Result + c;
+    end;
+  end;
+end;
+
 procedure WriteReport;
 var
   o: TextFile;
@@ -246,7 +274,7 @@ begin
   for i := 0 to listSize - 1 do
   begin
     if i > 0 then write(o, ', ');
-    write(o, '"', depots[i].id, '"');
+    write(o, '"', JsonEscape(depots[i].id), '"');
   end;
   writeln(o, ']}');
   CloseFile(o);

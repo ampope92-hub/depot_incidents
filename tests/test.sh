@@ -198,16 +198,21 @@ echo "no directory is writable by the unprivileged build user"
 # build user, with every tool closed, from /app/watch, and move what it wrote to a root-only
 # path. Each run is given its own output path, so a program that writes a fixed destination
 # rather than the one it is handed fails the second run. The output path is pre-created by root
-# as an empty, never-executable, write-only (0622) file the build user can open and truncate but
-# not read back, chmod, rename or replace: a regular file is the only thing that can end up there, so the binary cannot drop
-# a symlink pointing into /opt and have pytest read the verifier's own truth back as the agent's
-# figures, and it has nowhere to drop and run a native helper. Before each run every file under
-# the project except the binary just built has already lost its execute bits, so a helper shipped
-# beside the sources cannot be run from the Pascal.
+# as an empty, never-executable regular file at mode 0666, so the build user can open it for
+# reading and writing and truncate it in place: every ordinary Pascal creation route works on it
+# -- a text Rewrite, a TStringList.SaveToFile, a TFileStream.Create with fmCreate. What it cannot
+# do is chmod it, rename it or replace it, or create a sibling temporary file to rename over it,
+# because it does not own the file and the directory that holds it is root-owned and not writable.
+# So the JSON has to be written straight into the file it is handed, which is what the instruction
+# says is there for it; a regular file is the only thing that can end up at that path, so the
+# binary cannot leave a symlink pointing into /opt and have pytest read the verifier's own truth
+# back as the agent's figures, and it has nowhere to drop and run a native helper. Before each run
+# every file under the project except the binary just built has already lost its execute bits, so
+# a helper shipped beside the sources cannot be run from the Pascal.
 run_once() {
   local data="$1" outfile="$2" out="$3" pid
   rm -rf /app/out && mkdir -p /app/out && chown root:root /app/out && chmod 755 /app/out
-  : > "$outfile" && chown root:root "$outfile" && chmod 0622 "$outfile"
+  : > "$outfile" && chown root:root "$outfile" && chmod 0666 "$outfile"
   close_tools
   # The binary is started through watch_launch, which installs a seccomp filter and then execs it.
   # The filter denies memfd_create and execveat, so the binary cannot open an anonymous, path-less
@@ -242,8 +247,12 @@ run_once /app/data /app/out/depots.json /opt/run_shipped.json
 # ran during compilation could have had it on disk to read.
 staged="$(mktemp -d /app/export_XXXXXXXX)"
 cp /opt/hidden/data/*.csv /opt/hidden/data/policy.json /opt/hidden/data/README.md "$staged"/
-chown -R runner:runner "$staged"
-chmod -R a-w "$staged"
+# The export is read-only input: stage it root-owned so the unprivileged runner cannot chmod its
+# own copy back and rewrite it. The directory is root-owned 0755 (traversable, not writable) and
+# each file 0444 (world-readable), so the binary reads every file and owns none of them.
+chown -R root:root "$staged"
+chmod 755 "$staged"
+find "$staged" -type f -exec chmod 444 {} +
 echo "=== the same binary on the other network's export ==="
 run_once "$staged" /app/out/watch_second.json /opt/run_hidden.json
 rm -rf "$staged"
@@ -253,8 +262,9 @@ rm -rf "$staged"
 # source; a third with its own policy values leaves that dispatch nothing to match.
 staged3="$(mktemp -d /app/export_XXXXXXXX)"
 cp /opt/third/data/*.csv /opt/third/data/policy.json /opt/third/data/README.md "$staged3"/
-chown -R runner:runner "$staged3"
-chmod -R a-w "$staged3"
+chown -R root:root "$staged3"
+chmod 755 "$staged3"
+find "$staged3" -type f -exec chmod 444 {} +
 echo "=== the same binary on the third network's export ==="
 run_once "$staged3" /app/out/watch_third.json /opt/run_third.json
 rm -rf "$staged3"
