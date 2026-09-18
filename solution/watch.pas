@@ -8,7 +8,11 @@
   depots with the highest severe rate over the logged years, as many as the policy asks for.
 
   A depot's rate does not move from one year to the next, so the severe rate over the logged
-  years is the rate it will be running at in the programme year.
+  years is the rate it will be running at in the programme year. The list is held to a rate
+  against the whole network over the hours the listed depots work in that year, so the ranking
+  is checked against that bar on the register's budgeted hours before it is written out, and
+  on an export where the highest rates would not clear it the strongest list of that size is
+  taken instead.
 
   Three things about the export. The hours a depot works sit in two sets of columns, payroll and
   agency, and the rate is per hour worked, so both are summed. A depot the register marks as
@@ -27,15 +31,18 @@ type
     id: string;
     mergedInto: string; { blank, or the id of the depot this one was folded into }
     hours: Double;      { hours worked over the log years, payroll and agency together }
+    next: Double;       { hours budgeted for the programme year, the same two columns }
     severe: Integer;    { severe incidents over the log years }
     logged: Integer;    { every logged incident, for reference }
-    score: Double;
+    rate: Double;       { severe incidents per hour worked }
+    score: Double;      { what the list is sorted on }
   end;
 
 var
   depots: array of TDepot;
   dataDir, outPath: string;
-  listSize, yearFrom, yearTo: Integer;
+  listSize, yearFrom, yearTo, progYear: Integer;
+  rateBar: Double;
 
 function ReadWhole(const path: string): string;
 var
@@ -52,7 +59,8 @@ end;
 
 { the policy is JSON, so it is decoded as JSON rather than searched as text: spacing,
   key order and string escapes are left to the parser, not to us }
-procedure ReadPolicy(const path: string; out places, firstYear, lastYear: Integer);
+procedure ReadPolicy(const path: string; out places, firstYear, lastYear, progYear: Integer;
+  out bar: Double);
 var
   root: TJSONData;
   o: TJSONObject;
@@ -69,6 +77,12 @@ begin
     if (years = nil) or (years.Count <> 2) then raise Exception.Create('log_years is not [first, last]');
     firstYear := years.Integers[0];
     lastYear := years.Integers[1];
+    { the programme year and the bar the list is held to: the year after the log and no bar at
+      all if the policy leaves either out, which leaves the ranking to stand as it is }
+    progYear := lastYear + 1;
+    if o.Find('programme_year', jtNumber) <> nil then progYear := o.Integers['programme_year'];
+    bar := 0;
+    if o.Find('minimum_rate_ratio', jtNumber) <> nil then bar := o.Floats['minimum_rate_ratio'];
   except
     on E: Exception do
     begin
@@ -100,7 +114,7 @@ procedure LoadDepots;
 var
   rows, f: TStringList;
   i, c, y, n, mergedCol: Integer;
-  hoursCol: array of Integer;
+  hoursCol, nextCol: array of Integer;
 begin
   rows := TStringList.Create;
   f := TStringList.Create;
@@ -109,7 +123,11 @@ begin
     Split(rows[0], f);
     mergedCol := f.IndexOf('merged_into');
     SetLength(hoursCol, 0);
-    { every hours column for a log year counts, payroll (labour_hours_) and agency (agency_hours_) }
+    SetLength(nextCol, 0);
+    { every hours column for a log year counts, payroll (labour_hours_) and agency (agency_hours_),
+      and the pair for the programme year is kept apart: those are the hours the list's rate is
+      weighted by. Columns are found by the year in the name, so a register that carries a longer
+      or a shorter log reads the same way. }
     for c := 0 to f.Count - 1 do
       if (Pos('labour_hours_', f[c]) = 1) or (Pos('agency_hours_', f[c]) = 1) then
       begin
@@ -118,6 +136,11 @@ begin
         begin
           SetLength(hoursCol, Length(hoursCol) + 1);
           hoursCol[High(hoursCol)] := c;
+        end
+        else if y = progYear then
+        begin
+          SetLength(nextCol, Length(nextCol) + 1);
+          nextCol[High(nextCol)] := c;
         end;
       end;
     n := 0;
@@ -131,6 +154,9 @@ begin
       depots[n].hours := 0;
       for c := 0 to High(hoursCol) do
         depots[n].hours := depots[n].hours + StrToFloat(f[hoursCol[c]]);
+      depots[n].next := 0;
+      for c := 0 to High(nextCol) do
+        depots[n].next := depots[n].next + StrToFloat(f[nextCol[c]]);
       depots[n].severe := 0;
       depots[n].logged := 0;
       Inc(n);
@@ -205,6 +231,7 @@ begin
       end;
       if (j < 0) or (j = i) or (depots[j].mergedInto <> '') then Continue;
       depots[j].hours := depots[j].hours + depots[i].hours;
+      depots[j].next := depots[j].next + depots[i].next;
       depots[j].severe := depots[j].severe + depots[i].severe;
       depots[j].logged := depots[j].logged + depots[i].logged;
     end;
@@ -235,6 +262,53 @@ begin
       Dec(j);
     end;
     depots[j + 1] := t;
+  end;
+end;
+
+{ the rate the first count depots run at over the programme year, their incidents against
+  their hours, each depot's rate read off the log and its hours off the register }
+function ListRate(count: Integer): Double;
+var
+  i: Integer;
+  ev, hv: Double;
+begin
+  ev := 0;
+  hv := 0;
+  for i := 0 to count - 1 do
+  begin
+    ev := ev + depots[i].rate * depots[i].next;
+    hv := hv + depots[i].next;
+  end;
+  if hv <= 0 then Exit(0);
+  Result := ev / hv;
+end;
+
+{ The places go to the worst depots, but the list is held to a rate against the whole network
+  and that rate is over the hours the listed depots work, so the highest rates are not always
+  the strongest list: one big depot on a middling rate carries enough hours to pull the list
+  under the bar while a smaller one just behind it would leave it clear. Where the ranking
+  already clears the bar this changes nothing. Where it does not, the best list of this size
+  is found: for any rate L the list that maximises hours * (rate - L) is the best candidate
+  against L, and taking that list's own rate as the next L climbs to the strongest list of
+  that size in a few passes. }
+procedure ClearTheBar;
+var
+  i, pass: Integer;
+  network, lam, better: Double;
+begin
+  network := ListRate(Length(depots));
+  if (network <= 0) or (rateBar <= 0) then Exit;
+  lam := ListRate(listSize);
+  pass := 0;
+  while (ListRate(listSize) < rateBar * network) and (pass < 20) do
+  begin
+    for i := 0 to High(depots) do
+      depots[i].score := depots[i].next * (depots[i].rate - lam);
+    SortByScore;
+    better := ListRate(listSize);
+    if better <= lam then Break;
+    lam := better;
+    Inc(pass);
   end;
 end;
 
@@ -295,14 +369,18 @@ begin
   outPath := ParamStr(2);
   DefaultFormatSettings.DecimalSeparator := '.';
 
-  ReadPolicy(dataDir + '/policy.json', listSize, yearFrom, yearTo);
+  ReadPolicy(dataDir + '/policy.json', listSize, yearFrom, yearTo, progYear, rateBar);
 
   LoadDepots;
   LoadIncidents;
   FoldMerged;
   for i := 0 to High(depots) do
-    depots[i].score := depots[i].severe / depots[i].hours;
+  begin
+    depots[i].rate := depots[i].severe / depots[i].hours;
+    depots[i].score := depots[i].rate;
+  end;
   SortByScore;
   if listSize > Length(depots) then listSize := Length(depots);
+  ClearTheBar;
   WriteReport;
 end.

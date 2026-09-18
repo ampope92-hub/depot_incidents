@@ -245,7 +245,10 @@ run_once /app/data /app/out/depots.json /opt/run_shipped.json
 
 # Then the other network. Its export is staged only now, after the build has finished and every
 # process it started is gone, into a fresh directory the binary has never seen, so nothing that
-# ran during compilation could have had it on disk to read.
+# ran during compilation could have had it on disk to read. Its policy.json is laid out the way
+# its own team's tool writes one, with no indentation, the keys in another order and one of them
+# spelled with a JSON string escape, so the run needs the policy decoded as JSON rather than
+# searched as text, on a network whose answer is not in the agent's image to begin with.
 staged="$(mktemp -d /app/export_XXXXXXXX)"
 cp /opt/hidden/data/*.csv /opt/hidden/data/policy.json /opt/hidden/data/README.md "$staged"/
 # The export is read-only input: stage it root-owned so the unprivileged runner cannot chmod its
@@ -269,25 +272,6 @@ find "$staged3" -type f -exec chmod 444 {} +
 echo "=== the same binary on the third network's export ==="
 run_once "$staged3" /app/out/watch_third.json /opt/run_third.json
 rm -rf "$staged3"
-
-# A fourth run: the shipped export again, with its policy.json serialised the way another tool
-# would write it (no indentation, keys in another order, one key spelled with a JSON string
-# escape). It decodes to the same object, so the same list clears the same key; a program that
-# searched the policy text for a literal key name instead of decoding the JSON fails here and
-# nowhere else. The data directory pytest reads for this run is assembled root-only under /opt
-# from the shipped files, which the hash check covers, and the probe policy.
-mkdir -p /opt/probe_data
-cp /app/data/*.csv /app/data/README.md /opt/probe_data/
-cp /opt/probe/policy.json /opt/probe_data/policy.json
-chmod 700 /opt/probe_data && chmod 600 /opt/probe_data/*
-staged4="$(mktemp -d /app/export_XXXXXXXX)"
-cp /opt/probe_data/* "$staged4"/
-chown -R root:root "$staged4"
-chmod 755 "$staged4"
-find "$staged4" -type f -exec chmod 444 {} +
-echo "=== the same binary on the shipped export with its policy re-serialised ==="
-run_once "$staged4" /app/out/watch_probe.json /opt/run_probe.json
-rm -rf "$staged4"
 
 # Nothing the agent started may be alive while pytest runs or while the reward is written.
 as_runner bash -c 'kill -9 -1' 2>/dev/null || true

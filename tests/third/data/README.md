@@ -1,10 +1,12 @@
 # Western parcel network safety export, programme planning
 
-Five files from the safety team's share, pulled for the 2024 programme.
+Five files from the safety team's share, pulled for the 2024 programme. The share goes back
+four years: the 2019 sheet had been archived off before it was cut, so the log and the register
+both start in 2020, which is what the policy's log years say.
 
 ## incidents.csv
 
-The incident log for 2019 to 2023, one row per logged incident: `incident_id`, `depot`, `site`,
+The incident log for 2020 to 2023, one row per logged incident: `incident_id`, `depot`, `site`,
 `date` and `severity`, which is `severe` for an injury that needed treatment away from the depot
 and `minor` for everything else, first-aid cases, slips, near misses with a vehicle. Minor
 incidents are entered by the depot itself, on the wall book or its own app depending on the
@@ -80,7 +82,7 @@ None of the hubs was in the pilot; they went on the handsets with everyone else.
 ## From the memo
 
 The safety league table ranks every depot by the logged incidents on its books per ten thousand
-hours worked over the five years of the log. The memo proposes the top twenty five for the
+hours worked over the four years of the log. The memo proposes the top twenty five for the
 programme, and those are the depots in `league_table_top`. From January the network moves to
 mandatory logging on the handsets, every incident, minor or severe, entered at the depot where it
 happened before the shift closes.

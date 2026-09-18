@@ -92,6 +92,11 @@ def main():
         n_hubs, hub_visitor, other_visitor, hub_power = 4, (0.35, 0.50), (0.0, 0.04), 2.0
     last_year = first_year + years - 1
     next_year = last_year + 1
+    # How far back the export's own share goes. The Western team's share was cut after the first
+    # year of the log had been archived off, so that year is not in the export: its register
+    # carries four years of the log beside the programme year rather than five, its log starts a
+    # year later, and policy.json's log_years says so.
+    log_from = first_year + 1 if a.third else first_year
 
     depots = []
     for i in range(n_depots):
@@ -237,6 +242,10 @@ def main():
     for old in list(merged_into):
         key_counts[survivor(old)] += key_counts.pop(old)
 
+    # Only the years the export's share covers are written out.
+    incidents = [r for r in incidents if r[3].year >= log_from]
+    claims = [r for r in claims if r[3].year >= log_from]
+
     out = pathlib.Path(a.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     with open(out / "pilot_year.csv", "w", newline="") as fh:
@@ -265,7 +274,7 @@ def main():
     for depot, region, hours, lam, rep in depots:
         share = agency_rng.uniform(*heavy_share) if depot in heavy else agency_rng.uniform(0.0, 0.2)
         agency[depot] = {y: int(hours[y] * min(0.9, share * agency_rng.uniform(0.85, 1.15))) for y in hours}
-    ys = list(range(first_year, next_year + 1))
+    ys = list(range(log_from, next_year + 1))
     with open(out / "depots.csv", "w", newline="") as fh:
         w = csv.writer(fh)
         w.writerow(["depot", "region", "merged_into"] + [f"labour_hours_{y}" for y in ys] + [f"agency_hours_{y}" for y in ys])
@@ -277,22 +286,30 @@ def main():
     for r in incidents:
         d = survivor(r[1])
         logged[d] = logged.get(d, 0) + 1
-    log_hours = {d: sum(h[y] for y in range(first_year, last_year + 1)) for d, _, h, _, _ in depots}
+    log_hours = {d: sum(h[y] for y in range(log_from, last_year + 1)) for d, _, h, _, _ in depots}
     for old in list(merged_into):
         log_hours[survivor(old)] += log_hours.pop(old)
     rate = {d: 10000 * logged.get(d, 0) / log_hours[d] for d in log_hours}
     top = sorted(rate, key=lambda d: -rate[d])[:list_size]
     policy = {
         "network": network,
-        "log_years": [first_year, last_year],
+        "log_years": [log_from, last_year],
         "programme_year": next_year,
         "list_size": list_size,
         "minimum_rate_ratio": rate_bar,
         "league_table_top": top,
     }
+    text = json.dumps(policy, indent=2) + "\n"
+    if a.hidden:
+        # The Northern policy comes out of the team's own tool rather than off someone's editor:
+        # no indentation, the keys in the order it holds them, and one of them written with a JSON
+        # string escape. It decodes to the same object as any other spelling of it.
+        order = ["network", "programme_year", "list_size", "minimum_rate_ratio", "log_years",
+                 "league_table_top"]
+        text = json.dumps({k: policy[k] for k in order}, separators=(",", ":"))
+        text = text.replace('"list_size"', '"list_\\u0073ize"', 1) + "\n"
     with open(out / "policy.json", "w") as fh:
-        json.dump(policy, fh, indent=2)
-        fh.write("\n")
+        fh.write(text)
 
     kd = pathlib.Path(a.key_dir)
     kd.mkdir(parents=True, exist_ok=True)
