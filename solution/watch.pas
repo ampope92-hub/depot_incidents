@@ -169,38 +169,46 @@ begin
 end;
 
 { An incident is tallied at the site where it happened, not under the depot column, which is
-  the depot the injured person is on the books of. Columns are found by name. }
+  the depot the injured person is on the books of. The log is the big file in the export and
+  nothing here needs more than the row in hand, so it is read a line at a time rather than held
+  in memory. Columns are found by name. }
 procedure LoadIncidents;
 var
-  rows, f: TStringList;
-  i, d, y, siteCol, dateCol, sevCol: Integer;
+  fh: TextFile;
+  f: TStringList;
+  line: string;
+  d, siteCol, sevCol: Integer;
 begin
-  rows := TStringList.Create;
   f := TStringList.Create;
+  AssignFile(fh, dataDir + '/incidents.csv');
+  Reset(fh);
   try
-    rows.LoadFromFile(dataDir + '/incidents.csv');
-    Split(rows[0], f);
-    siteCol := f.IndexOf('site');
-    dateCol := f.IndexOf('date');
-    sevCol := f.IndexOf('severity');
-    if (siteCol < 0) or (dateCol < 0) or (sevCol < 0) then
+    if Eof(fh) then
     begin
-      writeln(StdErr, 'incidents.csv needs site, date and severity columns');
+      writeln(StdErr, 'incidents.csv is empty');
       Halt(1);
     end;
-    for i := 1 to rows.Count - 1 do
+    ReadLn(fh, line);
+    Split(line, f);
+    siteCol := f.IndexOf('site');
+    sevCol := f.IndexOf('severity');
+    if (siteCol < 0) or (sevCol < 0) then
     begin
-      if Trim(rows[i]) = '' then Continue;
-      Split(rows[i], f);
-      y := StrToInt(Copy(f[dateCol], 1, 4));
+      writeln(StdErr, 'incidents.csv needs site and severity columns');
+      Halt(1);
+    end;
+    while not Eof(fh) do
+    begin
+      ReadLn(fh, line);
+      if Trim(line) = '' then Continue;
+      Split(line, f);
       d := FindDepot(f[siteCol]);
       if d < 0 then Continue;
-      if (y < yearFrom) or (y > yearTo) then Continue;
       Inc(depots[d].logged);
       if f[sevCol] = 'severe' then Inc(depots[d].severe);
     end;
   finally
-    rows.Free;
+    CloseFile(fh);
     f.Free;
   end;
 end;

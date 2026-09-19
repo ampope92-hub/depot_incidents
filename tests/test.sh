@@ -66,9 +66,13 @@ TOOLS="$( { find /usr/local/bin /usr/local/sbin /usr/bin /bin /usr/sbin /sbin -x
 # reason: it is the wrapper that starts the binary under the seccomp filter, and it runs nothing but
 # the one binary it is handed. Only regular files are listed: the
 # merged /bin is itself a symlink to /usr/bin, and closing that directory would shut the whole
-# tree, launcher included. The dynamic loader is left out as
-# well: /usr/bin/ld.so links to it, and closing it would stop every dynamically linked program,
-# the launcher included, not only the ones the agent's code might spawn.
+# tree, launcher included. The dynamic loader is left out of the list: /usr/bin/ld.so links to it,
+# every process on the box is mapped from it, and taking its mode away and giving it back around
+# each run would change a file the whole system is running on. What it could otherwise be handed
+# is closed at the other end instead: the filter below refuses clone, so a run cannot keep a
+# parent alive while a loaded helper works, and the only file a run can write is the file it would
+# have to hand the loader, so writing the answer truncates the helper's own image and the process
+# dies on its mapping with the output left empty.
 close_tools() { for f in $TOOLS; do chmod 750 "$f" 2>/dev/null || true; done; }
 open_tools()  { for f in $TOOLS; do chmod 755 "$f" 2>/dev/null || true; done; }
 trap open_tools EXIT
@@ -103,13 +107,20 @@ chown -R runner:runner /app/watch
 # link script as an extra INPUT entry, and the link is refused. This checks the link inputs fpc
 # actually resolved, not the Pascal source, so it needs no scan for a directive and a renamed or
 # text-format payload has no way past it.
+# The build gets the 900 seconds task.toml gives it and no more, compile and link together, so a
+# project that cannot be compiled inside the stated limit is refused with a message rather than
+# quietly taking the whole verifier's time.
+build_start=$SECONDS
 setsid \
   setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
-  bash -c 'cd /app/watch && fpc -Cn -O2 -Mobjfpc -Sh -FEobj -FUobj -Fu/app/watch/src -Fi/app/watch/src -o/app/watch/watch src/watch.pas' &
+  bash -c 'cd /app/watch && exec timeout -s KILL 900 fpc -Cn -O2 -Mobjfpc -Sh -FEobj -FUobj -Fu/app/watch/src -Fi/app/watch/src -o/app/watch/watch src/watch.pas' &
 bpid=$!
 wait "$bpid"
 bstatus=$?
 echo "compile exit status: $bstatus"
+if [ "$bstatus" -eq 124 ] || [ "$bstatus" -eq 137 ]; then
+  echo "the compile did not finish inside the 900 second build limit this task states"
+fi
 # setsid makes the child a session leader, so its group id is its own pid and can be addressed
 # directly. Reading it out of /proc races setsid and has taken down the verifier on sibling tasks.
 kill -TERM -- -"$bpid" 2>/dev/null || true
@@ -142,13 +153,18 @@ fi
 
 # Link only when the inputs checked out, as the build user, with fpc's own generated command.
 if [ "$link_ok" -eq 1 ]; then
+  left=$(( 900 - (SECONDS - build_start) ))
+  [ "$left" -lt 1 ] && left=1
   setsid \
     setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
-    bash -c 'cd /app/watch && sh ppas.sh' &
+    bash -c "cd /app/watch && exec timeout -s KILL $left sh ppas.sh" &
   lpid=$!
   wait "$lpid"
   lstatus=$?
   echo "link exit status: $lstatus"
+  if [ "$lstatus" -eq 124 ] || [ "$lstatus" -eq 137 ]; then
+    echo "the build did not finish inside the 900 second build limit this task states"
+  fi
   kill -TERM -- -"$lpid" 2>/dev/null || true
   kill -KILL -- -"$lpid" 2>/dev/null || true
   as_runner bash -c 'kill -9 -1' 2>/dev/null || true
@@ -218,8 +234,10 @@ run_once() {
   # The binary is started through watch_launch, which installs a seccomp filter and then execs it.
   # The filter denies memfd_create and execveat, so the binary cannot open an anonymous, path-less
   # file, write native code into it and run it (fexecve); with no writable directory either, there
-  # is nowhere at all for a dropped-in native helper to come from: nothing else on the box runs
-  # while the binary does, which is what the instruction states. Ordinary file work is unaffected.
+  # is nowhere at all for a dropped-in native helper to come from. It denies fork, vfork and clone
+  # as well, so the work cannot be handed to child workers running beside it: nothing else on the
+  # box runs while the binary does, which is what the instruction states. Ordinary file work is
+  # unaffected.
   setsid \
     setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
     env -C /app/watch HOME=/home/runner /usr/local/bin/watch_launch /app/watch/watch "$data" "$outfile" &

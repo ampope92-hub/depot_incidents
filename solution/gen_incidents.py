@@ -300,6 +300,13 @@ def main():
         "league_table_top": top,
     }
     text = json.dumps(policy, indent=2) + "\n"
+    if a.third:
+        # The Western team hold the keys in their own order, and the number of places does not
+        # sit next to the programme year in it: a reader that takes the value after
+        # programme_year for the list size reads the rate bar there instead.
+        order = ["network", "log_years", "programme_year", "minimum_rate_ratio", "list_size",
+                 "league_table_top"]
+        text = json.dumps({k: policy[k] for k in order}, indent=2) + "\n"
     if a.hidden:
         # The Northern policy comes out of the team's own tool rather than off someone's editor:
         # no indentation, the keys in the order it holds them, and one of them written with a JSON

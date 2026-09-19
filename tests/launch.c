@@ -3,9 +3,11 @@
    the box to execute; a program that carries its own machine code and tries to run it through
    an anonymous file (memfd_create + fexecve, i.e. execveat on an unnamed fd) is stopped here.
    The filter denies memfd_create, execveat and a few adjacent shared-memory calls with EPERM,
-   and allows everything else, so the tool's ordinary file work is untouched. Installed through
-   prctl with no-new-privs set, which needs no privilege, and the process fails closed: if the
-   filter will not install, it says why and exits without ever running the tool. */
+   and the calls that start a second process with it, so the job stays in the one program and
+   cannot be handed to child workers; everything else is allowed, so the tool's ordinary file
+   work is untouched. Installed through prctl with no-new-privs set, which needs no privilege,
+   and the process fails closed: if the filter will not install, it says why and exits without
+   ever running the tool. */
 #define _GNU_SOURCE
 #include <stddef.h>
 #include <stdio.h>
@@ -22,6 +24,10 @@
 #define SECCOMP_RET_KILL_PROCESS 0x80000000U
 #endif
 
+#ifndef __NR_clone3
+#define __NR_clone3 435
+#endif
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         fprintf(stderr, "watch_launch: need a program to run\n");
@@ -35,12 +41,18 @@ int main(int argc, char **argv) {
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS),
         /* load the syscall number */
         BPF_STMT(BPF_LD | BPF_W | BPF_ABS, offsetof(struct seccomp_data, nr)),
-        /* the anonymous-executable route, and neighbours, all jump to the deny leaf */
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_memfd_create, 5, 0),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_execveat,     4, 0),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_shmget,       3, 0),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_shmat,        2, 0),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_userfaultfd,  1, 0),
+        /* the anonymous-executable route, and neighbours, all jump to the deny leaf, as do the
+           calls that would start a second process: the work is the one program's to do, so a
+           child worker is refused at the syscall rather than left to run beside it */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_memfd_create, 9, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_execveat,     8, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_shmget,       7, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_shmat,        6, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_userfaultfd,  5, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone,        4, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_clone3,       3, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fork,         2, 0),
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_vfork,        1, 0),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
         BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ERRNO | (EPERM & SECCOMP_RET_DATA)),
     };

@@ -35,7 +35,7 @@ SHIPPED_SHA = {
     # dlopen()/mmap(PROT_EXEC) need only the read bit, so an unhashed README could carry a
     # dynamically loaded payload without tripping any other check. Pinning it closes that off
     # the same way the other five files are closed: any change to it fails this test.
-    "README.md": "b9fc81a68068ff97f072a5602ef3643ecde9c088b185c915324465364677c612",
+    "README.md": "1b15d29018aad93b3785065b7f937a8cd7f7d458a3cad2679c604093f51dace7",
 }
 
 RUNS = [

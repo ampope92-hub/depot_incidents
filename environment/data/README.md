@@ -9,6 +9,7 @@ The incident log for 2020 to 2024, one row per logged incident: `incident_id`, `
 and `minor` for everything else, first-aid cases, slips, near misses with a vehicle. Minor
 incidents are entered by the depot itself, on the wall book or the depot's own app depending on
 the depot. Severe incidents are entered by the regional safety lead, who is called for every one.
+Every row in the file is dated inside the years the policy names.
 
 `depot` is the depot the injured person is on the books of: the book the entry goes in is their
 own depot's, and the regional lead files a severe incident under the person's cost centre,
