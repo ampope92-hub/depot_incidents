@@ -30,10 +30,10 @@ type
   TDepot = record
     id: string;
     mergedInto: string; { blank, or the id of the depot this one was folded into }
-    hours: Double;      { hours worked over the log years, payroll and agency together }
-    next: Double;       { hours budgeted for the programme year, the same two columns }
-    severe: Integer;    { severe incidents over the log years }
-    logged: Integer;    { every logged incident, for reference }
+    hours: Int64;       { hours worked over the log years, payroll and agency together }
+    next: Int64;        { hours budgeted for the programme year, the same two columns }
+    severe: Int64;      { severe incidents over the log years }
+    logged: Int64;      { every logged incident, for reference }
     rate: Double;       { severe incidents per hour worked }
     score: Double;      { what the list is sorted on }
   end;
@@ -43,6 +43,7 @@ var
   dataDir, outPath: string;
   listSize, yearFrom, yearTo, progYear: Integer;
   rateBar: Double;
+  exactRate: Boolean = True;  { the ranking sort compares rates exactly }
 
 function ReadWhole(const path: string): string;
 var
@@ -153,10 +154,10 @@ begin
       if mergedCol >= 0 then depots[n].mergedInto := Trim(f[mergedCol]) else depots[n].mergedInto := '';
       depots[n].hours := 0;
       for c := 0 to High(hoursCol) do
-        depots[n].hours := depots[n].hours + StrToFloat(f[hoursCol[c]]);
+        depots[n].hours := depots[n].hours + StrToInt64(Trim(f[hoursCol[c]]));
       depots[n].next := 0;
       for c := 0 to High(nextCol) do
-        depots[n].next := depots[n].next + StrToFloat(f[nextCol[c]]);
+        depots[n].next := depots[n].next + StrToInt64(Trim(f[nextCol[c]]));
       depots[n].severe := 0;
       depots[n].logged := 0;
       Inc(n);
@@ -253,6 +254,22 @@ begin
   SetLength(depots, n);
 end;
 
+{ a goes before b: while the ranking is the severe rate, two depots are compared by
+  cross-multiplying whole severe counts and whole hours, so two depots on exactly the
+  same rate come out level however large the hours are and the id decides between them;
+  the bar climb ranks on a weighted score, which is a real number, and compares that. }
+function Ahead(const a, b: TDepot): Boolean;
+begin
+  if exactRate then
+  begin
+    if a.severe * b.hours <> b.severe * a.hours then
+      Exit(a.severe * b.hours > b.severe * a.hours);
+  end
+  else if a.score <> b.score then
+    Exit(a.score > b.score);
+  Result := a.id < b.id;
+end;
+
 { highest score first, ties broken by depot id so the list is the same on every run }
 procedure SortByScore;
 var
@@ -263,8 +280,7 @@ begin
   begin
     t := depots[i];
     j := i - 1;
-    while (j >= 0) and ((depots[j].score < t.score) or
-          ((depots[j].score = t.score) and (depots[j].id > t.id))) do
+    while (j >= 0) and Ahead(t, depots[j]) do
     begin
       depots[j + 1] := depots[j];
       Dec(j);
@@ -306,6 +322,7 @@ var
 begin
   network := ListRate(Length(depots));
   if (network <= 0) or (rateBar <= 0) then Exit;
+  exactRate := False;
   lam := ListRate(listSize);
   pass := 0;
   while (ListRate(listSize) < rateBar * network) and (pass < 20) do
@@ -384,7 +401,8 @@ begin
   FoldMerged;
   for i := 0 to High(depots) do
   begin
-    depots[i].rate := depots[i].severe / depots[i].hours;
+    if depots[i].hours > 0 then depots[i].rate := depots[i].severe / depots[i].hours
+    else depots[i].rate := 0;
     depots[i].score := depots[i].rate;
   end;
   SortByScore;
