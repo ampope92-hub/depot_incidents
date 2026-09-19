@@ -99,3 +99,18 @@ work is the same work, and when the safety team has gone back over the numbers t
 rate has come out flat year after year. The programme year runs at that same rate. What differs,
 and differs by a lot, is how much of it each depot writes down, and from January that stops
 mattering, because everything goes through the handsets.
+
+When the safety team puts a number on a depot it uses the severe incidents and nothing else. It
+counts the severe rows in the log at the site they happened at, every year of the log together as
+one count rather than a count a year, over the hours that depot worked across those same years,
+payroll and agency, with the merged rows folded in first. That is the depot's rate, and the team
+works it out the same way for every depot in the register, the pilot sixty included. It does not
+scale the severe count up into a total by putting a figure on the severe share: the share is the
+same everywhere, so it cancels out of a comparison between depots. It takes the counts as they
+stand, with no allowance made for a small depot's thin year, and where two depots come out level
+the lower id goes first. The programme year runs at that same rate, on the hours the register
+budgets for it.
+
+The pilot file is where a reading gets checked, not where it comes from. A reading that measures
+the depot rather than its paperwork puts the pilot depots in very nearly the order the handsets
+put them in over the pilot year. The league table's own figure does not come close.
