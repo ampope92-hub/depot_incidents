@@ -254,16 +254,72 @@ begin
   SetLength(depots, n);
 end;
 
-{ a goes before b: while the ranking is the severe rate, two depots are compared by
-  cross-multiplying whole severe counts and whole hours, so two depots on exactly the
-  same rate come out level however large the hours are and the id decides between them;
-  the bar climb ranks on a weighted score, which is a real number, and compares that. }
+{ which of two rates is the higher, each given as a whole count of incidents over a whole
+  number of hours, worked out exactly and with no product in it that could run past Int64:
+  compare the whole part of the two rates, and while those agree compare what is left over
+  by turning both remainders up the other way, which swaps which of the two is the larger.
+  A depot with no hours on the register is read the way it always was read here: with
+  incidents and no hours it comes above a depot that has hours, and two of them are level.
+  1 when a is the higher rate, -1 when b is, 0 when the two are exactly equal. }
+function CmpRate(an, ad, bn, bd: Int64): Integer;
+var
+  qa, qb, ra, rb: Int64;
+  flip: Boolean;
+begin
+  if (ad <= 0) and (bd <= 0) then Exit(0);
+  if ad <= 0 then
+  begin
+    if an > 0 then Exit(1);
+    Exit(0);
+  end;
+  if bd <= 0 then
+  begin
+    if bn > 0 then Exit(-1);
+    Exit(0);
+  end;
+  flip := False;
+  Result := 0;
+  while True do
+  begin
+    qa := an div ad;
+    qb := bn div bd;
+    if qa <> qb then
+    begin
+      if qa > qb then Result := 1 else Result := -1;
+      Break;
+    end;
+    ra := an mod ad;
+    rb := bn mod bd;
+    if (ra = 0) and (rb = 0) then Break;
+    if ra = 0 then
+    begin
+      Result := -1;
+      Break;
+    end;
+    if rb = 0 then
+    begin
+      Result := 1;
+      Break;
+    end;
+    an := ad; ad := ra;
+    bn := bd; bd := rb;
+    flip := not flip;
+  end;
+  if flip then Result := -Result;
+end;
+
+{ a goes before b: while the ranking is the severe rate, two depots are compared as a whole
+  severe count over whole hours, so two depots on exactly the same rate come out level
+  however large the hours are and the id decides between them; the bar climb ranks on a
+  weighted score, which is a real number, and compares that. }
 function Ahead(const a, b: TDepot): Boolean;
+var
+  c: Integer;
 begin
   if exactRate then
   begin
-    if a.severe * b.hours <> b.severe * a.hours then
-      Exit(a.severe * b.hours > b.severe * a.hours);
+    c := CmpRate(a.severe, a.hours, b.severe, b.hours);
+    if c <> 0 then Exit(c > 0);
   end
   else if a.score <> b.score then
     Exit(a.score > b.score);
