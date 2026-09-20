@@ -60,11 +60,14 @@ chmod -R go-rwx /opt/watch_pristine
 # python or awk the binary shells out to, and reopened straight after. Root is unaffected.
 TOOLS="$( { find /usr/local/bin /usr/local/sbin /usr/bin /bin /usr/sbin /sbin -xdev -type f -perm /111 2>/dev/null;
              for l in $(find /usr/local/bin /usr/bin /bin -xdev -type l 2>/dev/null); do t="$(readlink -f "$l")"; [ -f "$t" ] && echo "$t"; done; } \
-  | sort -u | grep -v -E 'ld-linux|/ld\.so$' | grep -v -x -F -e "$(readlink -f /usr/bin/env)" -e /usr/local/bin/watch_launch)"
-# /usr/bin/env is what setpriv starts each run through, so it stays open; it is not a route to
-# anything, since whatever it executes is checked on its own. watch_launch stays open for the same
-# reason: it is the wrapper that starts the binary under the seccomp filter, and it runs nothing but
-# the one binary it is handed. Only regular files are listed: the
+  | sort -u | grep -v -E 'ld-linux|/ld\.so$' | grep -v -x -F -e /usr/local/bin/watch_launch)"
+# /usr/bin/env used to be held out of this list, because each run was started through it to set the
+# working directory and HOME. The shell does both itself below, so env is needed by nothing and is
+# closed with every other tool. watch_launch is the one name still held out: it is the wrapper that
+# installs the seccomp filter and then execs the binary it is handed, so it has to be runnable at
+# the moment the run starts, and the only thing it can be handed that the build user may execute is
+# the binary just built, since everything else on the system paths is closed. Only regular files
+# are listed: the
 # merged /bin is itself a symlink to /usr/bin, and closing that directory would shut the whole
 # tree, launcher included. The dynamic loader is left out of the list: /usr/bin/ld.so links to it,
 # every process on the box is mapped from it, and taking its mode away and giving it back around
@@ -238,9 +241,12 @@ run_once() {
   # as well, so the work cannot be handed to child workers running beside it: nothing else on the
   # box runs while the binary does, which is what the instruction states. Ordinary file work is
   # unaffected.
-  setsid \
-    setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
-    env -C /app/watch HOME=/home/runner /usr/local/bin/watch_launch /app/watch/watch "$data" "$outfile" &
+  # The working directory and HOME are set by the shell itself, in a subshell that then execs the
+  # launcher, so no /usr/bin/env is involved and env is closed to the build user like every other
+  # tool while the binary runs.
+  ( cd /app/watch && export HOME=/home/runner && exec setsid \
+      setpriv --clear-groups --no-new-privs --reuid runner --regid runner \
+      /usr/local/bin/watch_launch /app/watch/watch "$data" "$outfile" ) &
   pid=$!
   wait "$pid"
   echo "run exit status: $? ($data)"
