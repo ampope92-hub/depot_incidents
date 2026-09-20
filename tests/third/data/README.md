@@ -17,10 +17,9 @@ Every row in the file is dated inside the years the policy names.
 entry goes in, and a severe incident is filed by the lead under the person's cost centre, which
 is what the insurer's claim gets opened against. `site` is where it happened. The two agree on
 most rows and part company when somebody is hurt away from their own depot, mostly trunk
-drivers: nine of the depots are hubs, D031, D109, D128, D065, D054, D057, D105, D019 and D022,
-and at each of them the yard through the night is mostly drivers from the one depot that runs
-its trunk routes, D023, D063, D007, D083, D023, D074, D038, D046 and D098 in turn, so between
-half and seven tenths of what is logged at a hub went into that trunking depot's book. An ordinary
+drivers: eighteen of the depots are hubs, and at each of them the yard through the night is
+mostly drivers from the one depot that runs its trunk routes, so between half and seven tenths
+of what is logged at a hub went into that trunking depot's book. An ordinary
 depot gets the odd visitor from its own region. The handsets belong to the site, so from January
 an incident is logged at the depot where it happened.
 
@@ -38,16 +37,15 @@ The depot register: `depot`, `region`, `merged_into`, then `labour_hours_<year>`
 payroll reports for the depot's own staff, and `agency_hours_<year>`, the hours the agencies
 invoiced for agency staff at that depot, each for every year of the log and for 2024, the
 programme year, where both are budgeted. The hours a depot works are the two added together, and
-a rate per hour is per hour worked whoever pays the wages. Twelve depots run two fifths or more
-of their hours on agency staff, up to around two thirds; the rest a fifth or less.
+a rate per hour is per hour worked whoever pays the wages. Twenty four depots run a third or more
+of their hours on agency staff, up to around two thirds; the rest around a fifth or less.
 
 `merged_into` is blank except on a depot that was folded into another depot during the log.
-Twelve Western depots were, all in January 2020, when two of the region's smaller operators were
-folded into their neighbours. Five of them went straight into a depot that stands on its own: D033
-into D084, D040 into D090, D058 into D020, D107 into D046 and D118 into D050. The other seven are
-the old cluster, yards closed into one another in the same reorganisation, each folded into the
-next one along, the work ending up at D023, so every one of those rows names the yard it went to
-and that yard's row names the next one, down to the one left standing.
+Seventeen Western depots were, all in January 2020, when two of the region's smaller operators
+were folded into their neighbours. Ten of them went straight into a depot that stands on its own.
+The other seven are the old cluster, yards closed into one another in the same reorganisation,
+each folded into the next one along, the work ending up at D236, so every one of those rows names
+the yard it went to and that yard's row names the next one, down to the one left standing.
 From the merge the log carries the surviving depot's id for the absorbed
 site, `depot` and `site` columns both, and the programme year does too, but payroll kept the old
 cost centres, so a merged depot's hours are still on its own row for every year, 2024 included.
@@ -59,8 +57,8 @@ first hop.
 
 ## pilot_year.csv
 
-Fifty depots took the handsets a year before the rest of the network and ran them alongside the
-wall book for that year. This file holds what the handsets counted at each of them: `depot`, the
+A hundred depots took the handsets a year before the rest of the network and ran them alongside
+the wall book for that year. This file holds what the handsets counted at each of them: `depot`, the
 `year`, the `incidents` counted and the `labour_hours` the depot worked, payroll and agency
 together. The count covers everything that happened at the depot that year, minor incidents
 included, whoever was hurt and wherever they were based. The log for the same depots is still
@@ -83,7 +81,7 @@ None of the hubs was in the pilot; they went on the handsets with everyone else.
 ## From the memo
 
 The safety league table ranks every depot by the logged incidents on its books per ten thousand
-hours worked over the four years of the log. The memo proposes the top twenty five for the
+hours worked over the four years of the log. The memo proposes the top fifty for the
 programme, and those are the depots in `league_table_top`. From January the network moves to
 mandatory logging on the handsets, every incident, minor or severe, entered at the depot where it
 happened before the shift closes.
@@ -104,12 +102,11 @@ The number the safety team puts on a depot comes off the severe incidents and no
 counts the severe rows in the log at the site they happened at, every year of the log together as
 one count and not a count a year, over the hours that depot worked across those same years,
 payroll and agency, the merged rows folded in first. That is the depot's rate, and it is worked
-out the same way for every depot in the register, the pilot fifty with the rest. The team does not
+out the same way for every depot in the register, the pilot hundred with the rest. The team does not
 scale the severe count up into a total by putting a figure on the severe share: the share is the
 same everywhere, so it cancels out of a comparison between depots. Counts are taken as they stand,
-with no allowance made for a small depot's thin year, and where two depots come out level the
-lower id takes the place. The programme year runs at that same rate, on the hours the register
-budgets for it.
+with no allowance made for a small depot's thin year. The programme year runs at that same rate,
+on the hours the register budgets for it.
 
 The pilot file is where a reading gets checked, not where it comes from. A reading that measures
 the depot rather than its paperwork puts the pilot depots in very nearly the order the handsets

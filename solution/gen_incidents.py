@@ -55,7 +55,7 @@ def main():
         network, n_depots, years = "Northern parcel network", 150, 5
         severe_share, rate_mu, rate_sigma = 0.12, math.log(3.2), 0.45
         rep_a, rep_b = 0.7, 1.0            # minor-incident logging rate, Beta(a, b)
-        list_size, rate_bar = 20, 1.65
+        list_size, rate_bar = 20, 1.70
         regions = ["Scotland", "North East", "North West", "Yorkshire"]
         first_year = 2018
         n_pilot_default = 60
@@ -69,16 +69,16 @@ def main():
         # steeply hub status follows the depot's underlying rate (the hubs are the busy yards)
         n_hubs, hub_visitor, other_visitor, hub_power = 20, (0.70, 0.90), (0.0, 0.06), 3.0
     elif a.third:
-        network, n_depots, years = "Western parcel network", 130, 5
+        network, n_depots, years = "Western parcel network", 260, 5
         severe_share, rate_mu, rate_sigma = 0.11, math.log(3.6), 0.48
         rep_a, rep_b = 0.65, 0.8
-        list_size, rate_bar = 25, 1.62
+        list_size, rate_bar = 50, 1.62
         regions = ["Cumbria", "Lancashire", "Merseyside"]
         first_year = 2019
-        n_pilot_default = 50
-        n_agency_heavy, heavy_share = 12, (0.40, 0.65)
-        n_merged, chain_len = 5, 8
-        n_hubs, hub_visitor, other_visitor, hub_power = 9, (0.50, 0.70), (0.0, 0.05), 2.5
+        n_pilot_default = 100
+        n_agency_heavy, heavy_share = 24, (0.40, 0.65)
+        n_merged, chain_len = 10, 8
+        n_hubs, hub_visitor, other_visitor, hub_power = 18, (0.50, 0.70), (0.0, 0.05), 2.5
     else:
         network, n_depots, years = "Southern parcel network", 180, 5
         severe_share, rate_mu, rate_sigma = 0.10, math.log(4.0), 0.5
@@ -90,6 +90,9 @@ def main():
         n_agency_heavy, heavy_share = 4, (0.30, 0.45)
         n_merged, chain_len = 3, 12
         n_hubs, hub_visitor, other_visitor, hub_power = 4, (0.35, 0.50), (0.0, 0.04), 2.0
+    # How many names the memo prints. The Northern memo puts a shortlist on the page that runs
+    # longer than the number of places the programme has; the other two print one name per place.
+    memo_size = 26 if a.hidden else list_size
     last_year = first_year + years - 1
     next_year = last_year + 1
     # How far back the export's own share goes. The Western team's share was cut after the first
@@ -290,7 +293,7 @@ def main():
     for old in list(merged_into):
         log_hours[survivor(old)] += log_hours.pop(old)
     rate = {d: 10000 * logged.get(d, 0) / log_hours[d] for d in log_hours}
-    top = sorted(rate, key=lambda d: -rate[d])[:list_size]
+    top = sorted(rate, key=lambda d: -rate[d])[:memo_size]
     policy = {
         "network": network,
         "log_years": [log_from, last_year],

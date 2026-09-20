@@ -132,7 +132,7 @@
     "D150": 31
   },
   "list_size": 20,
-  "minimum_rate_ratio": 1.65,
+  "minimum_rate_ratio": 1.7,
   "truth": {
     "D001": {
       "rate_per_10k_hours": 3.328,

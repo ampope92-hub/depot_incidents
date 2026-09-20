@@ -80,8 +80,9 @@ None of the hubs was in the pilot; they went on the handsets with everyone else.
 ## From the memo
 
 The safety league table ranks every depot by the logged incidents on its books per ten thousand
-hours worked over the five years of the log. The memo proposes the top twenty for the programme,
-and those are the depots in `league_table_top`. From January the network moves to mandatory
+hours worked over the five years of the log. The memo puts its top twenty six on the page as a
+shortlist, more names than the programme has places, and those are the depots in
+`league_table_top`. From January the network moves to mandatory
 logging on the handsets, every incident, minor or severe, entered at the depot where it happened
 before the shift closes.
 
@@ -104,9 +105,8 @@ payroll and agency, the merged rows folded in first. That is the depot's rate, a
 out the same way for every depot in the register, the pilot sixty with the rest. The team does not
 scale the severe count up into a total by putting a figure on the severe share: the share is the
 same everywhere, so it cancels out of a comparison between depots. Counts are taken as they stand,
-with no allowance made for a small depot's thin year, and where two depots come out level the
-lower id takes the place. The programme year runs at that same rate, on the hours the register
-budgets for it.
+with no allowance made for a small depot's thin year. The programme year runs at that same rate,
+on the hours the register budgets for it.
 
 The pilot file is where a reading gets checked, not where it comes from. A reading that measures
 the depot rather than its paperwork puts the pilot depots in very nearly the order the handsets

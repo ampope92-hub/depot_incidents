@@ -1,125 +1,250 @@
 {
   "programme_year_incidents": {
-    "D001": 109,
-    "D002": 63,
-    "D003": 68,
-    "D004": 65,
-    "D005": 191,
-    "D006": 36,
-    "D007": 107,
-    "D008": 119,
-    "D009": 97,
-    "D010": 69,
-    "D011": 124,
-    "D013": 197,
-    "D014": 68,
-    "D015": 169,
-    "D016": 59,
-    "D017": 101,
-    "D018": 61,
-    "D019": 272,
-    "D020": 190,
-    "D021": 73,
-    "D022": 98,
-    "D023": 754,
-    "D024": 145,
-    "D025": 90,
+    "D001": 113,
+    "D002": 48,
+    "D003": 74,
+    "D004": 61,
+    "D005": 153,
+    "D006": 28,
+    "D007": 76,
+    "D008": 126,
+    "D009": 87,
+    "D011": 125,
+    "D013": 209,
+    "D014": 79,
+    "D015": 141,
+    "D016": 60,
+    "D018": 67,
+    "D019": 252,
+    "D020": 64,
+    "D021": 63,
+    "D022": 87,
+    "D023": 258,
+    "D024": 122,
+    "D025": 63,
     "D026": 46,
-    "D027": 32,
-    "D028": 201,
-    "D029": 175,
-    "D030": 53,
-    "D031": 404,
-    "D032": 52,
-    "D034": 45,
-    "D035": 122,
-    "D037": 57,
-    "D038": 40,
-    "D039": 44,
-    "D041": 41,
-    "D042": 38,
-    "D043": 180,
-    "D044": 92,
-    "D045": 219,
-    "D046": 129,
-    "D047": 89,
-    "D048": 77,
-    "D049": 36,
-    "D050": 158,
-    "D051": 69,
-    "D052": 167,
-    "D053": 72,
-    "D054": 139,
-    "D055": 111,
-    "D056": 181,
-    "D057": 70,
-    "D059": 52,
-    "D060": 121,
-    "D061": 65,
-    "D062": 103,
-    "D063": 43,
-    "D064": 67,
-    "D065": 417,
-    "D066": 88,
-    "D068": 82,
-    "D069": 132,
-    "D070": 183,
-    "D071": 84,
-    "D072": 72,
-    "D073": 87,
-    "D074": 62,
-    "D075": 152,
-    "D076": 287,
-    "D077": 67,
-    "D078": 87,
-    "D079": 104,
-    "D081": 129,
-    "D082": 104,
-    "D083": 136,
-    "D084": 139,
-    "D085": 64,
-    "D086": 194,
-    "D087": 77,
-    "D088": 39,
-    "D089": 54,
-    "D090": 263,
-    "D091": 187,
-    "D092": 78,
-    "D093": 35,
-    "D094": 78,
-    "D095": 60,
-    "D096": 66,
-    "D098": 262,
-    "D099": 107,
-    "D100": 94,
-    "D101": 93,
-    "D102": 51,
-    "D104": 91,
-    "D105": 198,
-    "D106": 66,
-    "D108": 69,
-    "D109": 75,
-    "D110": 64,
-    "D111": 89,
-    "D112": 131,
-    "D113": 153,
-    "D114": 145,
-    "D115": 162,
-    "D116": 106,
-    "D117": 60,
-    "D119": 140,
-    "D120": 79,
-    "D121": 91,
-    "D122": 189,
-    "D124": 164,
-    "D125": 117,
-    "D126": 67,
-    "D127": 39,
-    "D128": 128,
-    "D129": 139,
-    "D130": 130
+    "D027": 33,
+    "D028": 198,
+    "D029": 267,
+    "D030": 54,
+    "D031": 386,
+    "D032": 60,
+    "D033": 84,
+    "D034": 53,
+    "D035": 127,
+    "D036": 79,
+    "D037": 74,
+    "D038": 42,
+    "D039": 58,
+    "D040": 172,
+    "D041": 39,
+    "D042": 40,
+    "D043": 183,
+    "D044": 65,
+    "D045": 190,
+    "D046": 76,
+    "D047": 91,
+    "D048": 65,
+    "D049": 42,
+    "D050": 37,
+    "D051": 40,
+    "D052": 145,
+    "D053": 74,
+    "D054": 122,
+    "D055": 115,
+    "D056": 192,
+    "D057": 65,
+    "D058": 118,
+    "D060": 144,
+    "D061": 62,
+    "D062": 123,
+    "D064": 63,
+    "D065": 410,
+    "D068": 98,
+    "D069": 130,
+    "D070": 141,
+    "D071": 75,
+    "D072": 71,
+    "D073": 71,
+    "D074": 64,
+    "D075": 138,
+    "D076": 299,
+    "D077": 139,
+    "D078": 94,
+    "D079": 127,
+    "D081": 116,
+    "D082": 102,
+    "D083": 120,
+    "D084": 74,
+    "D085": 66,
+    "D086": 189,
+    "D087": 153,
+    "D088": 36,
+    "D089": 67,
+    "D090": 59,
+    "D091": 180,
+    "D092": 165,
+    "D093": 34,
+    "D094": 75,
+    "D095": 53,
+    "D096": 65,
+    "D097": 62,
+    "D098": 243,
+    "D099": 109,
+    "D100": 70,
+    "D101": 136,
+    "D102": 49,
+    "D103": 23,
+    "D104": 89,
+    "D105": 192,
+    "D106": 83,
+    "D107": 82,
+    "D108": 81,
+    "D109": 87,
+    "D110": 80,
+    "D111": 65,
+    "D112": 122,
+    "D114": 140,
+    "D115": 169,
+    "D116": 104,
+    "D117": 72,
+    "D118": 130,
+    "D119": 144,
+    "D121": 96,
+    "D122": 190,
+    "D123": 55,
+    "D124": 169,
+    "D125": 111,
+    "D126": 54,
+    "D127": 37,
+    "D128": 124,
+    "D129": 135,
+    "D131": 105,
+    "D132": 82,
+    "D133": 123,
+    "D134": 103,
+    "D135": 71,
+    "D136": 51,
+    "D137": 124,
+    "D138": 66,
+    "D139": 178,
+    "D140": 161,
+    "D141": 137,
+    "D142": 99,
+    "D143": 86,
+    "D144": 54,
+    "D145": 156,
+    "D146": 165,
+    "D147": 44,
+    "D148": 133,
+    "D149": 100,
+    "D150": 44,
+    "D151": 174,
+    "D152": 254,
+    "D153": 185,
+    "D154": 93,
+    "D155": 68,
+    "D156": 135,
+    "D157": 140,
+    "D158": 70,
+    "D159": 126,
+    "D160": 309,
+    "D161": 95,
+    "D162": 90,
+    "D163": 40,
+    "D164": 137,
+    "D165": 117,
+    "D166": 58,
+    "D167": 110,
+    "D168": 76,
+    "D169": 61,
+    "D170": 164,
+    "D171": 68,
+    "D172": 131,
+    "D173": 20,
+    "D175": 108,
+    "D176": 56,
+    "D177": 117,
+    "D178": 119,
+    "D179": 76,
+    "D180": 48,
+    "D181": 23,
+    "D182": 116,
+    "D183": 52,
+    "D184": 372,
+    "D185": 135,
+    "D186": 167,
+    "D187": 99,
+    "D188": 112,
+    "D189": 100,
+    "D191": 221,
+    "D192": 83,
+    "D193": 116,
+    "D194": 89,
+    "D195": 125,
+    "D196": 357,
+    "D197": 116,
+    "D198": 161,
+    "D199": 53,
+    "D200": 182,
+    "D201": 24,
+    "D202": 161,
+    "D203": 158,
+    "D205": 162,
+    "D206": 96,
+    "D207": 234,
+    "D208": 185,
+    "D209": 40,
+    "D210": 99,
+    "D211": 212,
+    "D212": 260,
+    "D213": 86,
+    "D214": 125,
+    "D217": 211,
+    "D218": 165,
+    "D219": 155,
+    "D220": 93,
+    "D222": 74,
+    "D223": 91,
+    "D224": 80,
+    "D225": 86,
+    "D226": 251,
+    "D227": 78,
+    "D228": 36,
+    "D229": 60,
+    "D230": 126,
+    "D231": 144,
+    "D232": 132,
+    "D233": 111,
+    "D234": 127,
+    "D235": 202,
+    "D236": 881,
+    "D237": 84,
+    "D238": 89,
+    "D239": 82,
+    "D240": 120,
+    "D241": 89,
+    "D242": 79,
+    "D243": 50,
+    "D244": 81,
+    "D245": 70,
+    "D246": 30,
+    "D247": 82,
+    "D248": 56,
+    "D249": 107,
+    "D250": 136,
+    "D251": 94,
+    "D252": 132,
+    "D253": 111,
+    "D254": 233,
+    "D255": 189,
+    "D256": 66,
+    "D257": 95,
+    "D258": 196,
+    "D259": 149,
+    "D260": 160
   },
-  "list_size": 25,
+  "list_size": 50,
   "minimum_rate_ratio": 1.62,
   "truth": {
     "D001": {
@@ -641,6 +766,526 @@
     "D130": {
       "rate_per_10k_hours": 2.929,
       "minor_logging_share": 0.398
+    },
+    "D131": {
+      "rate_per_10k_hours": 5.56,
+      "minor_logging_share": 0.926
+    },
+    "D132": {
+      "rate_per_10k_hours": 6.367,
+      "minor_logging_share": 0.158
+    },
+    "D133": {
+      "rate_per_10k_hours": 5.062,
+      "minor_logging_share": 0.836
+    },
+    "D134": {
+      "rate_per_10k_hours": 2.85,
+      "minor_logging_share": 0.911
+    },
+    "D135": {
+      "rate_per_10k_hours": 2.84,
+      "minor_logging_share": 0.694
+    },
+    "D136": {
+      "rate_per_10k_hours": 2.452,
+      "minor_logging_share": 0.361
+    },
+    "D137": {
+      "rate_per_10k_hours": 4.41,
+      "minor_logging_share": 0.512
+    },
+    "D138": {
+      "rate_per_10k_hours": 2.662,
+      "minor_logging_share": 0.975
+    },
+    "D139": {
+      "rate_per_10k_hours": 7.231,
+      "minor_logging_share": 0.626
+    },
+    "D140": {
+      "rate_per_10k_hours": 6.96,
+      "minor_logging_share": 0.001
+    },
+    "D141": {
+      "rate_per_10k_hours": 6.146,
+      "minor_logging_share": 0.795
+    },
+    "D142": {
+      "rate_per_10k_hours": 3.97,
+      "minor_logging_share": 0.739
+    },
+    "D143": {
+      "rate_per_10k_hours": 3.808,
+      "minor_logging_share": 0.315
+    },
+    "D144": {
+      "rate_per_10k_hours": 2.697,
+      "minor_logging_share": 0.493
+    },
+    "D145": {
+      "rate_per_10k_hours": 6.35,
+      "minor_logging_share": 0.026
+    },
+    "D146": {
+      "rate_per_10k_hours": 1.885,
+      "minor_logging_share": 0.084
+    },
+    "D147": {
+      "rate_per_10k_hours": 1.887,
+      "minor_logging_share": 0.691
+    },
+    "D148": {
+      "rate_per_10k_hours": 4.831,
+      "minor_logging_share": 0.928
+    },
+    "D149": {
+      "rate_per_10k_hours": 1.997,
+      "minor_logging_share": 0.609
+    },
+    "D150": {
+      "rate_per_10k_hours": 2.048,
+      "minor_logging_share": 0.294
+    },
+    "D151": {
+      "rate_per_10k_hours": 8.018,
+      "minor_logging_share": 0.739
+    },
+    "D152": {
+      "rate_per_10k_hours": 14.233,
+      "minor_logging_share": 0.134
+    },
+    "D153": {
+      "rate_per_10k_hours": 5.437,
+      "minor_logging_share": 0.008
+    },
+    "D154": {
+      "rate_per_10k_hours": 5.037,
+      "minor_logging_share": 0.907
+    },
+    "D155": {
+      "rate_per_10k_hours": 4.091,
+      "minor_logging_share": 0.039
+    },
+    "D156": {
+      "rate_per_10k_hours": 4.984,
+      "minor_logging_share": 0.047
+    },
+    "D157": {
+      "rate_per_10k_hours": 6.513,
+      "minor_logging_share": 0.129
+    },
+    "D158": {
+      "rate_per_10k_hours": 4.244,
+      "minor_logging_share": 0.314
+    },
+    "D159": {
+      "rate_per_10k_hours": 3.866,
+      "minor_logging_share": 0.634
+    },
+    "D160": {
+      "rate_per_10k_hours": 7.505,
+      "minor_logging_share": 0.342
+    },
+    "D161": {
+      "rate_per_10k_hours": 3.346,
+      "minor_logging_share": 0.611
+    },
+    "D162": {
+      "rate_per_10k_hours": 4.171,
+      "minor_logging_share": 0.481
+    },
+    "D163": {
+      "rate_per_10k_hours": 2.693,
+      "minor_logging_share": 0.593
+    },
+    "D164": {
+      "rate_per_10k_hours": 8.062,
+      "minor_logging_share": 0.156
+    },
+    "D165": {
+      "rate_per_10k_hours": 4.571,
+      "minor_logging_share": 0.063
+    },
+    "D166": {
+      "rate_per_10k_hours": 2.45,
+      "minor_logging_share": 0.557
+    },
+    "D167": {
+      "rate_per_10k_hours": 3.853,
+      "minor_logging_share": 0.648
+    },
+    "D168": {
+      "rate_per_10k_hours": 4.599,
+      "minor_logging_share": 0.371
+    },
+    "D169": {
+      "rate_per_10k_hours": 2.729,
+      "minor_logging_share": 0.203
+    },
+    "D170": {
+      "rate_per_10k_hours": 3.838,
+      "minor_logging_share": 0.989
+    },
+    "D171": {
+      "rate_per_10k_hours": 4.067,
+      "minor_logging_share": 0.997
+    },
+    "D172": {
+      "rate_per_10k_hours": 4.312,
+      "minor_logging_share": 0.664
+    },
+    "D173": {
+      "rate_per_10k_hours": 2.03,
+      "minor_logging_share": 0.104
+    },
+    "D174": {
+      "rate_per_10k_hours": 2.091,
+      "minor_logging_share": 0.792
+    },
+    "D175": {
+      "rate_per_10k_hours": 3.778,
+      "minor_logging_share": 0.061
+    },
+    "D176": {
+      "rate_per_10k_hours": 2.196,
+      "minor_logging_share": 0.572
+    },
+    "D177": {
+      "rate_per_10k_hours": 6.057,
+      "minor_logging_share": 0.75
+    },
+    "D178": {
+      "rate_per_10k_hours": 4.905,
+      "minor_logging_share": 0.107
+    },
+    "D179": {
+      "rate_per_10k_hours": 2.324,
+      "minor_logging_share": 0.992
+    },
+    "D180": {
+      "rate_per_10k_hours": 2.763,
+      "minor_logging_share": 0.421
+    },
+    "D181": {
+      "rate_per_10k_hours": 0.911,
+      "minor_logging_share": 0.269
+    },
+    "D182": {
+      "rate_per_10k_hours": 2.953,
+      "minor_logging_share": 0.034
+    },
+    "D183": {
+      "rate_per_10k_hours": 1.961,
+      "minor_logging_share": 0.637
+    },
+    "D184": {
+      "rate_per_10k_hours": 6.134,
+      "minor_logging_share": 0.56
+    },
+    "D185": {
+      "rate_per_10k_hours": 6.003,
+      "minor_logging_share": 0.864
+    },
+    "D186": {
+      "rate_per_10k_hours": 4.052,
+      "minor_logging_share": 0.563
+    },
+    "D187": {
+      "rate_per_10k_hours": 4.397,
+      "minor_logging_share": 0.426
+    },
+    "D188": {
+      "rate_per_10k_hours": 4.424,
+      "minor_logging_share": 0.63
+    },
+    "D189": {
+      "rate_per_10k_hours": 5.23,
+      "minor_logging_share": 0.721
+    },
+    "D190": {
+      "rate_per_10k_hours": 1.893,
+      "minor_logging_share": 0.278
+    },
+    "D191": {
+      "rate_per_10k_hours": 6.82,
+      "minor_logging_share": 0.003
+    },
+    "D192": {
+      "rate_per_10k_hours": 2.265,
+      "minor_logging_share": 0.719
+    },
+    "D193": {
+      "rate_per_10k_hours": 4.241,
+      "minor_logging_share": 0.175
+    },
+    "D194": {
+      "rate_per_10k_hours": 3.898,
+      "minor_logging_share": 0.9
+    },
+    "D195": {
+      "rate_per_10k_hours": 3.025,
+      "minor_logging_share": 0.84
+    },
+    "D196": {
+      "rate_per_10k_hours": 9.035,
+      "minor_logging_share": 0.434
+    },
+    "D197": {
+      "rate_per_10k_hours": 4.428,
+      "minor_logging_share": 0.04
+    },
+    "D198": {
+      "rate_per_10k_hours": 5.96,
+      "minor_logging_share": 0.516
+    },
+    "D199": {
+      "rate_per_10k_hours": 2.176,
+      "minor_logging_share": 0.333
+    },
+    "D200": {
+      "rate_per_10k_hours": 4.897,
+      "minor_logging_share": 0.813
+    },
+    "D201": {
+      "rate_per_10k_hours": 1.315,
+      "minor_logging_share": 0.924
+    },
+    "D202": {
+      "rate_per_10k_hours": 5.225,
+      "minor_logging_share": 0.734
+    },
+    "D203": {
+      "rate_per_10k_hours": 7.482,
+      "minor_logging_share": 0.414
+    },
+    "D204": {
+      "rate_per_10k_hours": 3.29,
+      "minor_logging_share": 0.019
+    },
+    "D205": {
+      "rate_per_10k_hours": 3.704,
+      "minor_logging_share": 0.346
+    },
+    "D206": {
+      "rate_per_10k_hours": 3.658,
+      "minor_logging_share": 0.258
+    },
+    "D207": {
+      "rate_per_10k_hours": 4.484,
+      "minor_logging_share": 0.13
+    },
+    "D208": {
+      "rate_per_10k_hours": 7.613,
+      "minor_logging_share": 0.061
+    },
+    "D209": {
+      "rate_per_10k_hours": 3.159,
+      "minor_logging_share": 0.378
+    },
+    "D210": {
+      "rate_per_10k_hours": 3.878,
+      "minor_logging_share": 0.904
+    },
+    "D211": {
+      "rate_per_10k_hours": 7.189,
+      "minor_logging_share": 0.779
+    },
+    "D212": {
+      "rate_per_10k_hours": 5.802,
+      "minor_logging_share": 0.598
+    },
+    "D213": {
+      "rate_per_10k_hours": 3.513,
+      "minor_logging_share": 0.792
+    },
+    "D214": {
+      "rate_per_10k_hours": 5.606,
+      "minor_logging_share": 0.183
+    },
+    "D215": {
+      "rate_per_10k_hours": 1.979,
+      "minor_logging_share": 0.227
+    },
+    "D216": {
+      "rate_per_10k_hours": 2.815,
+      "minor_logging_share": 0.865
+    },
+    "D217": {
+      "rate_per_10k_hours": 6.785,
+      "minor_logging_share": 0.277
+    },
+    "D218": {
+      "rate_per_10k_hours": 4.531,
+      "minor_logging_share": 0.089
+    },
+    "D219": {
+      "rate_per_10k_hours": 4.551,
+      "minor_logging_share": 0.167
+    },
+    "D220": {
+      "rate_per_10k_hours": 4.302,
+      "minor_logging_share": 0.897
+    },
+    "D221": {
+      "rate_per_10k_hours": 3.443,
+      "minor_logging_share": 0.942
+    },
+    "D222": {
+      "rate_per_10k_hours": 3.132,
+      "minor_logging_share": 0.225
+    },
+    "D223": {
+      "rate_per_10k_hours": 5.821,
+      "minor_logging_share": 0.924
+    },
+    "D224": {
+      "rate_per_10k_hours": 4.192,
+      "minor_logging_share": 0.909
+    },
+    "D225": {
+      "rate_per_10k_hours": 2.933,
+      "minor_logging_share": 0.422
+    },
+    "D226": {
+      "rate_per_10k_hours": 10.343,
+      "minor_logging_share": 0.012
+    },
+    "D227": {
+      "rate_per_10k_hours": 2.687,
+      "minor_logging_share": 0.995
+    },
+    "D228": {
+      "rate_per_10k_hours": 2.364,
+      "minor_logging_share": 0.415
+    },
+    "D229": {
+      "rate_per_10k_hours": 2.225,
+      "minor_logging_share": 0.994
+    },
+    "D230": {
+      "rate_per_10k_hours": 3.546,
+      "minor_logging_share": 0.869
+    },
+    "D231": {
+      "rate_per_10k_hours": 5.741,
+      "minor_logging_share": 0.821
+    },
+    "D232": {
+      "rate_per_10k_hours": 7.131,
+      "minor_logging_share": 0.704
+    },
+    "D233": {
+      "rate_per_10k_hours": 5.516,
+      "minor_logging_share": 0.202
+    },
+    "D234": {
+      "rate_per_10k_hours": 7.321,
+      "minor_logging_share": 0.477
+    },
+    "D235": {
+      "rate_per_10k_hours": 6.934,
+      "minor_logging_share": 0.017
+    },
+    "D236": {
+      "rate_per_10k_hours": 6.798,
+      "minor_logging_share": 0.243
+    },
+    "D237": {
+      "rate_per_10k_hours": 4.519,
+      "minor_logging_share": 0.753
+    },
+    "D238": {
+      "rate_per_10k_hours": 4.603,
+      "minor_logging_share": 0.845
+    },
+    "D239": {
+      "rate_per_10k_hours": 3.831,
+      "minor_logging_share": 0.724
+    },
+    "D240": {
+      "rate_per_10k_hours": 4.114,
+      "minor_logging_share": 0.326
+    },
+    "D241": {
+      "rate_per_10k_hours": 3.484,
+      "minor_logging_share": 0.764
+    },
+    "D242": {
+      "rate_per_10k_hours": 3.577,
+      "minor_logging_share": 0.363
+    },
+    "D243": {
+      "rate_per_10k_hours": 2.958,
+      "minor_logging_share": 0.454
+    },
+    "D244": {
+      "rate_per_10k_hours": 2.478,
+      "minor_logging_share": 0.394
+    },
+    "D245": {
+      "rate_per_10k_hours": 2.466,
+      "minor_logging_share": 0.402
+    },
+    "D246": {
+      "rate_per_10k_hours": 1.35,
+      "minor_logging_share": 0.0
+    },
+    "D247": {
+      "rate_per_10k_hours": 4.285,
+      "minor_logging_share": 0.948
+    },
+    "D248": {
+      "rate_per_10k_hours": 1.788,
+      "minor_logging_share": 0.501
+    },
+    "D249": {
+      "rate_per_10k_hours": 3.714,
+      "minor_logging_share": 0.169
+    },
+    "D250": {
+      "rate_per_10k_hours": 3.622,
+      "minor_logging_share": 0.189
+    },
+    "D251": {
+      "rate_per_10k_hours": 4.264,
+      "minor_logging_share": 0.019
+    },
+    "D252": {
+      "rate_per_10k_hours": 5.982,
+      "minor_logging_share": 0.168
+    },
+    "D253": {
+      "rate_per_10k_hours": 3.703,
+      "minor_logging_share": 0.083
+    },
+    "D254": {
+      "rate_per_10k_hours": 6.72,
+      "minor_logging_share": 0.278
+    },
+    "D255": {
+      "rate_per_10k_hours": 4.383,
+      "minor_logging_share": 0.815
+    },
+    "D256": {
+      "rate_per_10k_hours": 3.114,
+      "minor_logging_share": 0.533
+    },
+    "D257": {
+      "rate_per_10k_hours": 4.289,
+      "minor_logging_share": 0.209
+    },
+    "D258": {
+      "rate_per_10k_hours": 8.055,
+      "minor_logging_share": 0.541
+    },
+    "D259": {
+      "rate_per_10k_hours": 4.188,
+      "minor_logging_share": 0.842
+    },
+    "D260": {
+      "rate_per_10k_hours": 5.301,
+      "minor_logging_share": 0.313
     }
   }
 }
