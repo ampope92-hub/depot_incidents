@@ -27,11 +27,18 @@ uses
   SysUtils, Classes, fpjson, jsonparser;
 
 type
+  { An hours total, kept in two halves so that adding up a register's columns is exact whatever
+    the columns hold. The top half carries the sign. }
+  TWide = record
+    hi: Int64;
+    lo: QWord;
+  end;
+
   TDepot = record
     id: string;
     mergedInto: string; { blank, or the id of the depot this one was folded into }
-    hours: Int64;       { hours worked over the log years, payroll and agency together }
-    next: Int64;        { hours budgeted for the programme year, the same two columns }
+    hours: TWide;       { hours worked over the log years, payroll and agency together }
+    next: TWide;        { hours budgeted for the programme year, the same two columns }
     severe: Int64;      { severe incidents over the log years }
     logged: Int64;      { every logged incident, for reference }
     rate: Double;       { severe incidents per hour worked }
@@ -96,20 +103,47 @@ begin
   root.Free;
 end;
 
-{ Hours and incidents are whole numbers and they are added up as whole numbers. A register
-  whose columns are large enough for a total to run past what an Int64 holds would turn a
-  positive sum negative and rank a depot on a figure that is not its own, so every addition is
-  tested before it is made and an export like that is refused rather than ranked on a wrapped
-  total. The test is written out rather than left to a compiler switch so it holds whatever
-  the build line is. }
-function AddWhole(a, b: Int64; const where, id: string): Int64;
+{ Hours are whole numbers and they are added up exactly. A single column holds a whole number
+  the size of an Int64, and a register can carry a great many of them, so the running total is
+  kept in two halves rather than one: the bottom half takes the addition, its carry goes into
+  the top half, and the pair is read as one number. The two halves reach past any total this
+  program can be given. The loader indexes rows and columns with an Integer, so a register has
+  at most High(Integer) rows with at most High(Integer) hours columns each, and each column is
+  an Int64, which puts the largest total the loader can form under 2^125, well inside the pair.
+  The carry out of the top half is still tested, because ranking a depot on a total that had
+  wrapped round would be a wrong answer rather than a visible one; the test is written out
+  rather than left to a compiler switch so it holds whatever the build line is. }
+function Wide(v: Int64): TWide;
 begin
-  if ((b > 0) and (a > High(Int64) - b)) or ((b < 0) and (a < Low(Int64) - b)) then
+  Result.lo := QWord(v);
+  if v < 0 then Result.hi := -1 else Result.hi := 0;
+end;
+
+function WideAdd(const a, b: TWide; const where, id: string): TWide;
+begin
+  Result.lo := a.lo + b.lo;
+  Result.hi := a.hi + b.hi;
+  if Result.lo < a.lo then Result.hi := Result.hi + 1;
+  if ((a.hi < 0) = (b.hi < 0)) and ((Result.hi < 0) <> (a.hi < 0)) then
   begin
     writeln(StdErr, where, ': the figures for ', id, ' add up past what a whole number holds here');
     Halt(1);
   end;
-  Result := a + b;
+end;
+
+{ -1, 0 or 1 as the total is negative, nothing or positive }
+function WideSign(const v: TWide): Integer;
+begin
+  if v.hi < 0 then Exit(-1);
+  if (v.hi = 0) and (v.lo = 0) then Exit(0);
+  Result := 1;
+end;
+
+{ the pair as a real number, for the weighted score and the bar, which are real numbers anyway }
+function WideFloat(const v: TWide): Double;
+begin
+  Result := v.hi * 18446744073709551616.0
+            + (v.lo shr 32) * 4294967296.0 + (v.lo and $FFFFFFFF);
 end;
 
 { the id turned into a number, taken modulo a prime at every step so nothing in it runs past
@@ -231,12 +265,12 @@ begin
         if n = 0 then SetLength(depots, 64) else SetLength(depots, n * 2);
       depots[n].id := f[0];
       if mergedCol >= 0 then depots[n].mergedInto := Trim(f[mergedCol]) else depots[n].mergedInto := '';
-      depots[n].hours := 0;
+      depots[n].hours := Wide(0);
       for c := 0 to High(hoursCol) do
-        depots[n].hours := AddWhole(depots[n].hours, StrToInt64(Trim(f[hoursCol[c]])), 'depots.csv', depots[n].id);
-      depots[n].next := 0;
+        depots[n].hours := WideAdd(depots[n].hours, Wide(StrToInt64(Trim(f[hoursCol[c]]))), 'depots.csv', depots[n].id);
+      depots[n].next := Wide(0);
       for c := 0 to High(nextCol) do
-        depots[n].next := AddWhole(depots[n].next, StrToInt64(Trim(f[nextCol[c]])), 'depots.csv', depots[n].id);
+        depots[n].next := WideAdd(depots[n].next, Wide(StrToInt64(Trim(f[nextCol[c]]))), 'depots.csv', depots[n].id);
       depots[n].severe := 0;
       depots[n].logged := 0;
       Inc(n);
@@ -319,10 +353,13 @@ begin
         Inc(hops);
       end;
       if (j < 0) or (j = i) or (depots[j].mergedInto <> '') then Continue;
-      depots[j].hours := AddWhole(depots[j].hours, depots[i].hours, 'depots.csv', depots[j].id);
-      depots[j].next := AddWhole(depots[j].next, depots[i].next, 'depots.csv', depots[j].id);
-      depots[j].severe := AddWhole(depots[j].severe, depots[i].severe, 'incidents.csv', depots[j].id);
-      depots[j].logged := AddWhole(depots[j].logged, depots[i].logged, 'incidents.csv', depots[j].id);
+      depots[j].hours := WideAdd(depots[j].hours, depots[i].hours, 'depots.csv', depots[j].id);
+      depots[j].next := WideAdd(depots[j].next, depots[i].next, 'depots.csv', depots[j].id);
+      { the counts need no such care: every one of them is a row of the log counted once, so
+        the two being added here have already been counted apart from each other and their
+        total is still at most the number of rows the log has }
+      depots[j].severe := depots[j].severe + depots[i].severe;
+      depots[j].logged := depots[j].logged + depots[i].logged;
     end;
   n := 0;
   for i := 0 to High(depots) do
@@ -337,58 +374,76 @@ begin
   SetLength(depotSlot, 0);
 end;
 
-{ which of two rates is the higher, each given as a whole count of incidents over a whole
-  number of hours, worked out exactly and with no product in it that could run past Int64:
-  compare the whole part of the two rates, and while those agree compare what is left over
-  by turning both remainders up the other way, which swaps which of the two is the larger.
-  A depot with no hours on the register is read the way it always was read here: with
-  incidents and no hours it comes above a depot that has hours, and two of them are level.
-  1 when a is the higher rate, -1 when b is, 0 when the two are exactly equal. }
-function CmpRate(an, ad, bn, bd: Int64): Integer;
+{ one half of the register times the other, in quarters, so no step of it needs more room
+  than the machine has }
+procedure Mul64(a, b: QWord; out hi, lo: QWord);
 var
-  qa, qb, ra, rb: Int64;
-  flip: Boolean;
+  a0, a1, b0, b1, p00, p01, p10, mid: QWord;
 begin
-  if (ad <= 0) and (bd <= 0) then Exit(0);
-  if ad <= 0 then
+  a0 := a and $FFFFFFFF; a1 := a shr 32;
+  b0 := b and $FFFFFFFF; b1 := b shr 32;
+  p00 := a0 * b0;
+  p01 := a0 * b1;
+  p10 := a1 * b0;
+  mid := (p00 shr 32) + (p01 and $FFFFFFFF) + (p10 and $FFFFFFFF);
+  lo := (p00 and $FFFFFFFF) or (mid shl 32);
+  hi := a1 * b1 + (p01 shr 32) + (p10 shr 32) + (mid shr 32);
+end;
+
+{ a count of incidents times an hours total, in three halves. Both are nothing or more, the
+  count because each one of them is a row of the log and the hours because a rate is only
+  compared this way when both depots have hours on the register. }
+procedure MulCount(const h: TWide; c: Int64; out r2, r1, r0: QWord);
+var
+  m1, t1, t0: QWord;
+begin
+  Mul64(h.lo, QWord(c), m1, r0);
+  Mul64(QWord(h.hi), QWord(c), t1, t0);
+  r1 := m1 + t0;
+  r2 := t1;
+  if r1 < m1 then r2 := r2 + 1;
+end;
+
+{ which of two rates is the higher, each given as a whole count of incidents over a whole
+  number of hours, worked out exactly: the count on each side is taken against the other
+  side's hours, which puts the two rates over the same hours without dividing either, and
+  the two products are compared a half at a time. A depot with no hours on the register is
+  read the way it always was read here: with incidents and no hours it comes above a depot
+  that has hours, and two of them are level.
+  1 when a is the higher rate, -1 when b is, 0 when the two are exactly equal. }
+function CmpRate(an: Int64; const ad: TWide; bn: Int64; const bd: TWide): Integer;
+var
+  a2, a1, a0, b2, b1, b0: QWord;
+begin
+  if (WideSign(ad) <= 0) and (WideSign(bd) <= 0) then Exit(0);
+  if WideSign(ad) <= 0 then
   begin
     if an > 0 then Exit(1);
     Exit(0);
   end;
-  if bd <= 0 then
+  if WideSign(bd) <= 0 then
   begin
     if bn > 0 then Exit(-1);
     Exit(0);
   end;
-  flip := False;
-  Result := 0;
-  while True do
+  MulCount(bd, an, a2, a1, a0);
+  MulCount(ad, bn, b2, b1, b0);
+  if a2 <> b2 then
   begin
-    qa := an div ad;
-    qb := bn div bd;
-    if qa <> qb then
-    begin
-      if qa > qb then Result := 1 else Result := -1;
-      Break;
-    end;
-    ra := an mod ad;
-    rb := bn mod bd;
-    if (ra = 0) and (rb = 0) then Break;
-    if ra = 0 then
-    begin
-      Result := -1;
-      Break;
-    end;
-    if rb = 0 then
-    begin
-      Result := 1;
-      Break;
-    end;
-    an := ad; ad := ra;
-    bn := bd; bd := rb;
-    flip := not flip;
+    if a2 > b2 then Exit(1);
+    Exit(-1);
   end;
-  if flip then Result := -Result;
+  if a1 <> b1 then
+  begin
+    if a1 > b1 then Exit(1);
+    Exit(-1);
+  end;
+  if a0 <> b0 then
+  begin
+    if a0 > b0 then Exit(1);
+    Exit(-1);
+  end;
+  Result := 0;
 end;
 
 { a goes before b: while the ranking is the severe rate, two depots are compared as a whole
@@ -456,8 +511,8 @@ begin
   hv := 0;
   for i := 0 to count - 1 do
   begin
-    ev := ev + depots[i].rate * depots[i].next;
-    hv := hv + depots[i].next;
+    ev := ev + depots[i].rate * WideFloat(depots[i].next);
+    hv := hv + WideFloat(depots[i].next);
   end;
   if hv <= 0 then Exit(0);
   Result := ev / hv;
@@ -484,7 +539,7 @@ begin
   while (ListRate(listSize) < rateBar * network) and (pass < 20) do
   begin
     for i := 0 to High(depots) do
-      depots[i].score := depots[i].next * (depots[i].rate - lam);
+      depots[i].score := WideFloat(depots[i].next) * (depots[i].rate - lam);
     SortByScore;
     better := ListRate(listSize);
     if better <= lam then Break;
@@ -557,7 +612,7 @@ begin
   FoldMerged;
   for i := 0 to High(depots) do
   begin
-    if depots[i].hours > 0 then depots[i].rate := depots[i].severe / depots[i].hours
+    if WideSign(depots[i].hours) > 0 then depots[i].rate := depots[i].severe / WideFloat(depots[i].hours)
     else depots[i].rate := 0;
     depots[i].score := depots[i].rate;
   end;
