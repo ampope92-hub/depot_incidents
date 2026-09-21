@@ -35,7 +35,7 @@ SHIPPED_SHA = {
     # dlopen()/mmap(PROT_EXEC) need only the read bit, so an unhashed README could carry a
     # dynamically loaded payload without tripping any other check. Pinning it closes that off
     # the same way the other five files are closed: any change to it fails this test.
-    "README.md": "ea7f3fd2ef454e710566b86c239576512a9e77ca09e45facc64da86fc9575acc",
+    "README.md": "a07dcd8a2e7debfbf41985e4d70335cce8adc010a6e830dc10f6859139e9680e",
 }
 
 RUNS = [
@@ -55,6 +55,20 @@ def _sha(path):
         return hashlib.sha256(fh.read()).hexdigest()
 
 
+def _once(pairs):
+    """Build the object from the pairs as they were written, and refuse one that names the same
+    key twice. json.loads on its own keeps the last of a repeated member and drops the rest, so a
+    report written as {"depots": A, "depots": A} would decode to the single-member object the
+    instruction asks for and be graded as if that is what was in the file. The key is read here
+    off the raw text instead, so the object the verifier grades is the object that was written."""
+    seen = set()
+    for k, _ in pairs:
+        if k in seen:
+            raise ValueError(f"the object names {k!r} more than once")
+        seen.add(k)
+    return dict(pairs)
+
+
 def _load(path):
     assert path.exists() and path.stat().st_size > 0, (
         f"{path.name}: no depots.json was written for this run"
@@ -62,9 +76,9 @@ def _load(path):
     with _open(path) as fh:
         text = fh.read()
     try:
-        return json.loads(text)
-    except json.JSONDecodeError as e:
-        pytest.fail(f"{path.name}: not valid JSON ({e}): {text[:200]!r}")
+        return json.loads(text, object_pairs_hook=_once)
+    except ValueError as e:
+        pytest.fail(f"{path.name}: not one JSON object written once ({e}): {text[:200]!r}")
 
 
 def _key(path):

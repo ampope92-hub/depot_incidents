@@ -101,9 +101,23 @@ def main():
     # year later, and policy.json's log_years says so.
     log_from = first_year + 1 if a.third else first_year
 
+    # The Western register was put together out of the area books of the operators that network
+    # grew from, and it kept the yard numbers those books already carried, so a Western id is the
+    # network's prefix and a yard number, the numbers run in three ranges and they are not all the
+    # same width. The other two networks number their depots straight through from one.
+    def depot_id(i):
+        if not a.third:
+            return f"D{i + 1:03d}"
+        n = i + 1
+        if n <= 90:
+            return f"WST-{100 + n}"
+        if n <= 210:
+            return f"WST-{1200 + n - 90}"
+        return f"WST-{10400 + n - 210}"
+
     depots = []
     for i in range(n_depots):
-        depot = f"D{i + 1:03d}"
+        depot = depot_id(i)
         hours = {y: int(rng.lognormvariate(math.log(260000), 0.3)) for y in range(first_year, next_year + 1)}
         lam = rng.lognormvariate(rate_mu, rate_sigma)            # incidents per 10k labour hours
         rep = rng.betavariate(rep_a, rep_b)                       # share of minor incidents that get logged

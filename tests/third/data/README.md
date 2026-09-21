@@ -36,24 +36,29 @@ cross-check; the job doesn't need anything out of it.
 The depot register: `depot`, `region`, `merged_into`, then `labour_hours_<year>`, the hours
 payroll reports for the depot's own staff, and `agency_hours_<year>`, the hours the agencies
 invoiced for agency staff at that depot, each for every year of the log and for 2024, the
-programme year, where both are budgeted. The hours a depot works are the two added together, and
-a rate per hour is per hour worked whoever pays the wages. Twenty four depots run a third or more
-of their hours on agency staff, up to around two thirds; the rest around a fifth or less.
+programme year, where both are budgeted. The hours a depot works are the two added together,
+and a rate per hour is per hour worked whoever pays the wages. `depot` is the register's own id
+for the yard. An id is letters, digits and hyphens; each network in the group numbers its yards
+its own way, so an id is not a fixed width and a register's ids are not all the same length.
+Ours are the network prefix and the yard number the area book each yard came in with already
+carried, so they run seven to nine characters and the numbers are in three ranges rather than
+one. Twenty four depots run a third or more of their hours on agency staff, up to around two
+thirds; the rest around a fifth or less.
 
 `merged_into` is blank except on a depot that was folded into another depot during the log.
 Seventeen Western depots were, all in January 2020, when two of the region's smaller operators
-were folded into their neighbours. Ten of them went straight into a depot that stands on its own.
-The other seven are the old cluster, yards closed into one another in the same reorganisation,
-each folded into the next one along, the work ending up at D236, so every one of those rows names
-the yard it went to and that yard's row names the next one, down to the one left standing.
-From the merge the log carries the surviving depot's id for the absorbed
-site, `depot` and `site` columns both, and the programme year does too, but payroll kept the old
-cost centres, so a merged depot's hours are still on its own row for every year, 2024 included.
-The rows of a cluster are one depot: the hours on all of them and the incidents under all of those
-ids belong to the yard left standing at the end, not to whichever yard sits between it and the row
-in the register, and a merged id itself isn't a depot any more. So the right way to read
-`merged_into` is to follow it all the way to whichever id is left standing, not to stop at the
-first hop.
+were folded into their neighbours. Ten of them went straight into a depot that stands on its
+own. The other seven are the old cluster, yards closed into one another in the same
+reorganisation, each folded into the next one along, the work ending up at WST-10426, so every
+one of those rows names the yard it went to and that yard's row names the next one, down to the
+one left standing. From the merge the log carries the surviving depot's id for the absorbed
+site, `depot` and `site` columns both, and the programme year does too, but payroll kept the
+old cost centres, so a merged depot's hours are still on its own row for every year, 2024
+included. The rows of a cluster are one depot: the hours on all of them and the incidents under
+all of those ids belong to the yard left standing at the end, not to whichever yard sits
+between it and the row in the register, and a merged id itself isn't a depot any more. So the
+right way to read `merged_into` is to follow it all the way to whichever id is left standing,
+not to stop at the first hop.
 
 ## pilot_year.csv
 

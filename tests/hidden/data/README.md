@@ -34,10 +34,12 @@ cross-check; the job doesn't need anything out of it.
 The depot register: `depot`, `region`, `merged_into`, then `labour_hours_<year>`, the hours
 payroll reports for the depot's own staff, and `agency_hours_<year>`, the hours the agencies
 invoiced for agency staff at that depot, each for every year of the log and for 2023, the
-programme year, where both are budgeted. The hours a depot works are the two added together, and
-a rate per hour is per hour worked whoever pays the wages. The big Northern hubs run on agency
-labour: thirty depots take more than half their hours from the agencies, the rest a quarter or
-less.
+programme year, where both are budgeted. The hours a depot works are the two added together,
+and a rate per hour is per hour worked whoever pays the wages. `depot` is the register's own id
+for the yard. An id is letters, digits and hyphens; each network in the group numbers its yards
+its own way, so an id is not a fixed width and a register's ids are not all the same length.
+Ours are four characters throughout. The big Northern hubs run on agency labour: thirty depots
+take more than half their hours from the agencies, the rest a quarter or less.
 
 `merged_into` is blank except on a depot that was folded into another depot during the log. Twenty
 Northern depots were, all in January 2019, when the network took over the old regional carriers.
