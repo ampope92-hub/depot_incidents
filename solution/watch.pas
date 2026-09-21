@@ -40,6 +40,8 @@ type
 
 var
   depots: array of TDepot;
+  depotSlot: array of Integer; { a slot table over depots, -1 where a slot is free }
+  slotMask: Int64;             { the slot table is a power of two long, so this masks an id into it }
   dataDir, outPath: string;
   listSize, yearFrom, yearTo, progYear: Integer;
   rateBar: Double;
@@ -94,34 +96,107 @@ begin
   root.Free;
 end;
 
-function FindDepot(const id: string): Integer;
+{ Hours and incidents are whole numbers and they are added up as whole numbers. A register
+  whose columns are large enough for a total to run past what an Int64 holds would turn a
+  positive sum negative and rank a depot on a figure that is not its own, so every addition is
+  tested before it is made and an export like that is refused rather than ranked on a wrapped
+  total. The test is written out rather than left to a compiler switch so it holds whatever
+  the build line is. }
+function AddWhole(a, b: Int64; const where, id: string): Int64;
+begin
+  if ((b > 0) and (a > High(Int64) - b)) or ((b < 0) and (a < Low(Int64) - b)) then
+  begin
+    writeln(StdErr, where, ': the figures for ', id, ' add up past what a whole number holds here');
+    Halt(1);
+  end;
+  Result := a + b;
+end;
+
+{ the id turned into a number, taken modulo a prime at every step so nothing in it runs past
+  an Int64 and the value is the same on any build }
+function IdHash(const s: string): Int64;
 var
   i: Integer;
 begin
+  Result := 0;
+  for i := 1 to Length(s) do
+    Result := (Result * 131 + Ord(s[i])) mod 1000000007;
+end;
+
+{ A depot is looked up by id once for every row of the log, and the log is the big file in the
+  export, so the register goes into a slot table rather than being walked row by row for each
+  lookup. The id picks the slot, a taken slot moves on to the next one, and a lookup follows
+  the same path, so the first row written under an id is the one a lookup finds, as it was when
+  the register was walked from the top. The table is twice the length of the register, so a
+  lookup takes a step or two whatever size the register is. }
+procedure BuildIndex;
+var
+  i, slot: Integer;
+  cap: Int64;
+begin
+  cap := 16;
+  while cap < 2 * Int64(Length(depots)) do cap := cap * 2;
+  SetLength(depotSlot, cap);
+  slotMask := cap - 1;
+  for i := 0 to High(depotSlot) do depotSlot[i] := -1;
   for i := 0 to High(depots) do
-    if depots[i].id = id then Exit(i);
+  begin
+    slot := Integer(IdHash(depots[i].id) and slotMask);
+    while depotSlot[slot] >= 0 do slot := Integer((Int64(slot) + 1) and slotMask);
+    depotSlot[slot] := i;
+  end;
+end;
+
+function FindDepot(const id: string): Integer;
+var
+  slot: Integer;
+begin
+  if Length(depotSlot) = 0 then Exit(-1);
+  slot := Integer(IdHash(id) and slotMask);
+  while depotSlot[slot] >= 0 do
+  begin
+    if depots[depotSlot[slot]].id = id then Exit(depotSlot[slot]);
+    slot := Integer((Int64(slot) + 1) and slotMask);
+  end;
   Result := -1;
 end;
 
 procedure Split(const line: string; fields: TStringList);
+var
+  row: string;
 begin
+  { a file written on a Windows machine ends its rows with a carriage return: drop it so the
+    last column on the row reads like the rest }
+  row := line;
+  if (row <> '') and (row[Length(row)] = #13) then SetLength(row, Length(row) - 1);
   fields.Clear;
   fields.StrictDelimiter := True;
   fields.Delimiter := ',';
-  fields.DelimitedText := line;
+  fields.DelimitedText := row;
 end;
 
+{ The register is read a row at a time too. Nothing here needs more than the row in hand, and
+  a register that carries a lot of text in columns this job never reads would otherwise be held
+  in memory whole on top of the depots taken out of it. }
 procedure LoadDepots;
 var
-  rows, f: TStringList;
-  i, c, y, n, mergedCol: Integer;
+  fh: TextFile;
+  f: TStringList;
+  line: string;
+  c, y, n, mergedCol: Integer;
   hoursCol, nextCol: array of Integer;
 begin
-  rows := TStringList.Create;
   f := TStringList.Create;
+  AssignFile(fh, dataDir + '/depots.csv');
+  Reset(fh);
   try
-    rows.LoadFromFile(dataDir + '/depots.csv');
-    Split(rows[0], f);
+    if Eof(fh) then
+    begin
+      writeln(StdErr, 'depots.csv is empty');
+      Halt(1);
+    end;
+    ReadLn(fh, line);
+    Split(line, f);
     mergedCol := f.IndexOf('merged_into');
     SetLength(hoursCol, 0);
     SetLength(nextCol, 0);
@@ -145,28 +220,33 @@ begin
         end;
       end;
     n := 0;
-    SetLength(depots, rows.Count - 1);
-    for i := 1 to rows.Count - 1 do
+    SetLength(depots, 0);
+    while not Eof(fh) do
     begin
-      if Trim(rows[i]) = '' then Continue;
-      Split(rows[i], f);
+      ReadLn(fh, line);
+      if Trim(line) = '' then Continue;
+      Split(line, f);
+      { room for the row in hand, doubling rather than one row at a time }
+      if n = Length(depots) then
+        if n = 0 then SetLength(depots, 64) else SetLength(depots, n * 2);
       depots[n].id := f[0];
       if mergedCol >= 0 then depots[n].mergedInto := Trim(f[mergedCol]) else depots[n].mergedInto := '';
       depots[n].hours := 0;
       for c := 0 to High(hoursCol) do
-        depots[n].hours := depots[n].hours + StrToInt64(Trim(f[hoursCol[c]]));
+        depots[n].hours := AddWhole(depots[n].hours, StrToInt64(Trim(f[hoursCol[c]])), 'depots.csv', depots[n].id);
       depots[n].next := 0;
       for c := 0 to High(nextCol) do
-        depots[n].next := depots[n].next + StrToInt64(Trim(f[nextCol[c]]));
+        depots[n].next := AddWhole(depots[n].next, StrToInt64(Trim(f[nextCol[c]])), 'depots.csv', depots[n].id);
       depots[n].severe := 0;
       depots[n].logged := 0;
       Inc(n);
     end;
     SetLength(depots, n);
   finally
-    rows.Free;
+    CloseFile(fh);
     f.Free;
   end;
+  BuildIndex;
 end;
 
 { An incident is tallied at the site where it happened, not under the depot column, which is
@@ -239,10 +319,10 @@ begin
         Inc(hops);
       end;
       if (j < 0) or (j = i) or (depots[j].mergedInto <> '') then Continue;
-      depots[j].hours := depots[j].hours + depots[i].hours;
-      depots[j].next := depots[j].next + depots[i].next;
-      depots[j].severe := depots[j].severe + depots[i].severe;
-      depots[j].logged := depots[j].logged + depots[i].logged;
+      depots[j].hours := AddWhole(depots[j].hours, depots[i].hours, 'depots.csv', depots[j].id);
+      depots[j].next := AddWhole(depots[j].next, depots[i].next, 'depots.csv', depots[j].id);
+      depots[j].severe := AddWhole(depots[j].severe, depots[i].severe, 'incidents.csv', depots[j].id);
+      depots[j].logged := AddWhole(depots[j].logged, depots[i].logged, 'incidents.csv', depots[j].id);
     end;
   n := 0;
   for i := 0 to High(depots) do
@@ -252,6 +332,9 @@ begin
       Inc(n);
     end;
   SetLength(depots, n);
+  { the slot table describes the register as it was read, which the fold has just changed, and
+    nothing looks a depot up again }
+  SetLength(depotSlot, 0);
 end;
 
 { which of two rates is the higher, each given as a whole count of incidents over a whole
@@ -326,22 +409,39 @@ begin
   Result := a.id < b.id;
 end;
 
-{ highest score first, ties broken by depot id so the list is the same on every run }
-procedure SortByScore;
+{ Highest score first, ties broken by depot id so the list is the same on every run. No two
+  depots left standing carry the same id, so Ahead puts any two rows one way round and the
+  sorted register is one order however the sort reaches it. It is a heap sort rather than an
+  insertion pass: an insertion pass moves every row it steps over, so a register that arrives
+  in the wrong order costs a move for every pair of rows in it. }
+procedure SiftDown(root, last: Integer);
 var
-  i, j: Integer;
+  child: Integer;
   t: TDepot;
 begin
-  for i := 1 to High(depots) do
+  while root * 2 + 1 <= last do
   begin
-    t := depots[i];
-    j := i - 1;
-    while (j >= 0) and Ahead(t, depots[j]) do
-    begin
-      depots[j + 1] := depots[j];
-      Dec(j);
-    end;
-    depots[j + 1] := t;
+    child := root * 2 + 1;
+    { of the two children take the one that belongs further down the list }
+    if (child + 1 <= last) and Ahead(depots[child], depots[child + 1]) then Inc(child);
+    if not Ahead(depots[root], depots[child]) then Exit;
+    t := depots[root]; depots[root] := depots[child]; depots[child] := t;
+    root := child;
+  end;
+end;
+
+procedure SortByScore;
+var
+  i, last: Integer;
+  t: TDepot;
+begin
+  last := High(depots);
+  if last < 1 then Exit;
+  for i := (last - 1) div 2 downto 0 do SiftDown(i, last);
+  for i := last downto 1 do
+  begin
+    t := depots[0]; depots[0] := depots[i]; depots[i] := t;
+    SiftDown(0, i - 1);
   end;
 end;
 
